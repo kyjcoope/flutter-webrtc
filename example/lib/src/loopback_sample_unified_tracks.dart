@@ -46,6 +46,7 @@ class _MyAppState extends State<LoopBackSampleUnifiedTracks> {
   KeyProvider? _keySharedProvider;
   final Map<String, FrameCryptor> _frameCyrptors = {};
   Timer? _timer;
+  String? decoderTrackId;
   final _configuration = <String, dynamic>{
     'iceServers': [
       {'urls': 'stun:stun.l.google.com:19302'},
@@ -612,6 +613,7 @@ class _MyAppState extends State<LoopBackSampleUnifiedTracks> {
 
   Future<void> _addOrReplaceVideoTracks() async {
     for (var track in _localStream!.getVideoTracks()) {
+      decoderTrackId = track.id;
       await _connectionAddTrack(track, _localStream!);
     }
   }
@@ -757,7 +759,8 @@ class _MyAppState extends State<LoopBackSampleUnifiedTracks> {
               ],
             ),
             Expanded(
-              child: RTCVideoView(_localRenderer, mirror: true),
+              child: RTCVideoView(_localRenderer,
+                  mirror: true, trackId: decoderTrackId),
             ),
           ],
         )),

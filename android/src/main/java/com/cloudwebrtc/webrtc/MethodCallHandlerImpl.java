@@ -256,7 +256,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     EglBase.Context eglContext = EglUtils.getRootEglBaseContext();
 
     videoEncoderFactory = new CustomVideoEncoderFactory(eglContext, true, true);
-    videoDecoderFactory = new CustomVideoDecoderFactory(eglContext, messenger);
+    videoDecoderFactory = new CustomVideoDecoderFactory(eglContext);
 
     factoryBuilder
             .setVideoEncoderFactory(videoEncoderFactory)

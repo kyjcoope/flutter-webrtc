@@ -9,7 +9,6 @@ import com.cloudwebrtc.webrtc.utils.AnyThreadSink;
 import com.cloudwebrtc.webrtc.utils.ConstraintsArray;
 import com.cloudwebrtc.webrtc.utils.ConstraintsMap;
 import com.cloudwebrtc.webrtc.utils.Utils;
-import com.cloudwebrtc.webrtc.MySuperSecretSink;
 
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
@@ -28,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
+import org.webrtc.video.CustomVideoDecoderFactory;
 import org.webrtc.AudioTrack;
 import org.webrtc.CandidatePairChangeEvent;
 import org.webrtc.DataChannel;
@@ -55,7 +55,6 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
   final Map<String, MediaStream> remoteStreams = new HashMap<>();
   final Map<String, MediaStreamTrack> remoteTracks = new HashMap<>();
   final Map<String, RtpTransceiver> transceivers = new HashMap<>();
-  final Map<String, MySuperSecretSink> sinks = new HashMap<>();
   private final StateProvider stateProvider;
   private final EventChannel eventChannel;
   private EventChannel.EventSink eventSink;
@@ -406,10 +405,6 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
       remoteTracks.put(trackId, track);
 
-      MySuperSecretSink sink = new MySuperSecretSink();
-      track.addSink(sink);
-      sinks.put(trackId, sink);
-
       ConstraintsMap trackInfo = new ConstraintsMap();
       trackInfo.putString("id", trackId);
       trackInfo.putString("label", "Video");
@@ -482,6 +477,7 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
       params.putString("trackId", track.id());
 
       String trackId = track.id();
+      CustomVideoDecoderFactory.setTrackId(trackId);
       ConstraintsMap trackInfo = new ConstraintsMap();
       trackInfo.putString("id", trackId);
       trackInfo.putString("label", track.kind());

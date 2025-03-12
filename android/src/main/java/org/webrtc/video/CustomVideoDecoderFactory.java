@@ -1,32 +1,30 @@
 package org.webrtc.video;
 
 import androidx.annotation.Nullable;
-
 import org.webrtc.EglBase;
 import org.webrtc.SoftwareVideoDecoderFactory;
 import org.webrtc.VideoCodecInfo;
 import org.webrtc.VideoDecoder;
 import org.webrtc.VideoDecoderFactory;
 import org.webrtc.WrappedVideoDecoderFactory;
-import org.webrtc.MySuperSecretDecoder;
+import org.webrtc.video.VideoDecoderBypass;
 
-
-import io.flutter.plugin.common.BinaryMessenger;
-
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Map;
 import java.util.ArrayList;
 import java.util.List;
+import android.util.Log;
 
 public class CustomVideoDecoderFactory implements VideoDecoderFactory {
+    private static final Queue<String> trackQueue = new LinkedList<>();
     private SoftwareVideoDecoderFactory softwareVideoDecoderFactory = new SoftwareVideoDecoderFactory();
     private WrappedVideoDecoderFactory wrappedVideoDecoderFactory;
-    private boolean forceSWCodec  = false;
-    private BinaryMessenger messenger;
-
+    private boolean forceSWCodec = false;
     private List<String> forceSWCodecs = new ArrayList<>();
 
-    public  CustomVideoDecoderFactory(EglBase.Context sharedContext, BinaryMessenger messenger) {
+    public CustomVideoDecoderFactory(EglBase.Context sharedContext) {
         this.wrappedVideoDecoderFactory = new WrappedVideoDecoderFactory(sharedContext);
-        this.messenger = messenger;
     }
 
     public void setForceSWCodec(boolean forceSWCodec) {
@@ -40,23 +38,25 @@ public class CustomVideoDecoderFactory implements VideoDecoderFactory {
     @Nullable
     @Override
     public VideoDecoder createDecoder(VideoCodecInfo videoCodecInfo) {
-        return new MySuperSecretDecoder(this.messenger);
-        // if(forceSWCodec) {
-        //     return softwareVideoDecoderFactory.createDecoder(videoCodecInfo);
-        // }
-        // if(!forceSWCodecs.isEmpty()) {
-        //     if(forceSWCodecs.contains(videoCodecInfo.name)) {
-        //         return softwareVideoDecoderFactory.createDecoder(videoCodecInfo);
-        //     }
-        // }
-        // return wrappedVideoDecoderFactory.createDecoder(videoCodecInfo);
+        String trackId;
+        synchronized (trackQueue) {
+            trackId = trackQueue.poll();
+        }
+        VideoDecoderBypass decoder = new VideoDecoderBypass(trackId);
+        return decoder;
     }
 
     @Override
     public VideoCodecInfo[] getSupportedCodecs() {
-        if(forceSWCodec && forceSWCodecs.isEmpty()) {
+        if (forceSWCodec && forceSWCodecs.isEmpty()) {
             return softwareVideoDecoderFactory.getSupportedCodecs();
         }
         return wrappedVideoDecoderFactory.getSupportedCodecs();
+    }
+
+    public static void setTrackId(String trackId) {
+        synchronized (trackQueue) {
+            trackQueue.add(trackId);
+        }
     }
 }
