@@ -3,7 +3,7 @@ import 'package:ffi/ffi.dart';
 
 import 'encoded_webrtc_frame.dart';
 
-base class FrameData extends ffi.Struct {
+base class EncodedFrame extends ffi.Struct {
   @ffi.Int32()
   external int width;
 
@@ -25,9 +25,9 @@ base class FrameData extends ffi.Struct {
   external int bufferSize;
 }
 
-typedef NativeBufferPopNative = ffi.Pointer<FrameData> Function(
+typedef NativeBufferPopNative = ffi.Pointer<EncodedFrame> Function(
     ffi.Pointer<Utf8> key);
-typedef NativeBufferPopDart = ffi.Pointer<FrameData> Function(
+typedef NativeBufferPopDart = ffi.Pointer<EncodedFrame> Function(
     ffi.Pointer<Utf8> key);
 
 final ffi.DynamicLibrary nativeLib =
@@ -39,8 +39,8 @@ final NativeBufferPopDart nativeBufferPop = nativeLib
 
 EncodedWebRTCFrame? popFrameFromTrack(String trackId) {
   final ffi.Pointer<Utf8> keyPtr = trackId.toNativeUtf8();
-  final ffi.Pointer<FrameData> frameDataPtr = nativeBufferPop(keyPtr);
+  final ffi.Pointer<EncodedFrame> framePtr = nativeBufferPop(keyPtr);
   calloc.free(keyPtr);
-  if (frameDataPtr.address == 0) return null;
-  return EncodedWebRTCFrame.fromPointer(frameDataPtr);
+  if (framePtr.address == 0) return null;
+  return EncodedWebRTCFrame.fromPointer(framePtr);
 }

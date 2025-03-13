@@ -13,7 +13,7 @@ class EncodedWebRTCFrame {
     required this.bufferSize,
   });
 
-  factory EncodedWebRTCFrame.fromPointer(ffi.Pointer<FrameData> ptr) {
+  factory EncodedWebRTCFrame.fromPointer(ffi.Pointer<EncodedFrame> ptr) {
     final nativeFrame = ptr.ref;
     Uint8List bufferList =
         nativeFrame.buffer.asTypedList(nativeFrame.bufferSize);
