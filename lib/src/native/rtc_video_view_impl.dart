@@ -67,7 +67,7 @@ class _RTCVideoView extends State<RTCVideoView> {
         EncodedWebRTCFrame? frame = popFrameFromTrack(widget.trackId!);
         if (frame == null) return;
         dev.log(
-            'FRAME: ${frame.width}x${frame.height}, time: ${frame.frameTime}, buffer size: ${frame.bufferSize}');
+            'FRAME: ${frame.width}x${frame.height}, time: ${frame.frameTime}');
       } catch (e) {
         print("Error pulling frame: $e");
       }

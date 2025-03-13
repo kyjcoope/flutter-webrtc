@@ -10,21 +10,20 @@ class EncodedWebRTCFrame {
     required this.rotation,
     required this.frameType,
     required this.buffer,
-    required this.bufferSize,
   });
 
   factory EncodedWebRTCFrame.fromPointer(ffi.Pointer<EncodedFrame> ptr) {
     final nativeFrame = ptr.ref;
     Uint8List bufferList =
         nativeFrame.buffer.asTypedList(nativeFrame.bufferSize);
+    Uint8List buffer = Uint8List.fromList(bufferList);
     return EncodedWebRTCFrame(
       width: nativeFrame.width,
       height: nativeFrame.height,
       frameTime: nativeFrame.frameTime,
       rotation: nativeFrame.rotation,
       frameType: nativeFrame.frameType,
-      buffer: bufferList,
-      bufferSize: nativeFrame.bufferSize,
+      buffer: buffer,
     );
   }
 
@@ -34,7 +33,4 @@ class EncodedWebRTCFrame {
   final int rotation;
   final int frameType;
   final Uint8List buffer;
-  final int bufferSize;
-
-  Uint8List getBufferAsUint8List() => buffer;
 }
