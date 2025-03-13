@@ -1,4 +1,4 @@
-#import "VideoDecoderBypass.h"
+#import "RTCVideoDecoderBypass.h"
 #import <WebRTC/RTCVideoCodecInfo.h>
 #import <WebRTC/RTCVideoFrame.h>
 #import <WebRTC/RTCCodecSpecificInfo.h>
