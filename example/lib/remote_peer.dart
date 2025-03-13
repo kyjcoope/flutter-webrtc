@@ -17,14 +17,11 @@ class RemotePeer {
     ],
   };
 
-  /// initialize the remote RTCPeerConnection.
-  /// the [onTrack] callback will be triggered when a remote track is received.
   Future<void> initConnection(Function(RTCTrackEvent) onTrack) async {
     connection = await createPeerConnection(configuration, constraints);
     connection!.onTrack = onTrack;
   }
 
-  /// clean up the remote connection.
   Future<void> close() async {
     await connection?.close();
     connection = null;

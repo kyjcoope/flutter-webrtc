@@ -38,9 +38,7 @@ class _LoopBackSampleState extends State<LoopBackSample> {
     await _remoteRenderer.initialize();
   }
 
-  /// creates the local and remote peer connections and negotiates a loopback call.
   Future<void> _makeCall() async {
-    // initialize local and remote peer connections.
     await _localPeer.initConnection();
     await _remotePeer.initConnection((RTCTrackEvent event) {
       if (event.track.kind == 'video') {
@@ -50,7 +48,6 @@ class _LoopBackSampleState extends State<LoopBackSample> {
       }
     });
 
-    // set up ICE candidate exchange.
     _localPeer.connection?.onIceCandidate = (candidate) {
       _remotePeer.connection?.addCandidate(candidate);
     };
@@ -58,14 +55,13 @@ class _LoopBackSampleState extends State<LoopBackSample> {
       _localPeer.connection?.addCandidate(candidate);
     };
 
-    // start local media (both audio and video).
     await _localPeer.startMedia(audio: true, video: true);
     await _localPeer.addTracks();
+    await _localPeer.setVideoCodec('h264');
     setState(() {
       _localRenderer.srcObject = _localPeer.stream;
     });
 
-    // create offer/answer for negotiation.
     var offer = await _localPeer.connection!.createOffer();
     await _localPeer.connection?.setLocalDescription(offer);
     await _remotePeer.connection?.setRemoteDescription(offer);

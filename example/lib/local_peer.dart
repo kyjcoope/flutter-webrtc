@@ -20,12 +20,10 @@ class LocalPeer {
     ],
   };
 
-  /// initialize the local RTCPeerConnection.
   Future<void> initConnection() async {
     connection = await createPeerConnection(configuration, constraints);
   }
 
-  /// start media (audio and/or video) using getUserMedia.
   Future<void> startMedia({bool audio = true, bool video = true}) async {
     final mediaConstraints = {
       'audio': audio,
@@ -44,10 +42,26 @@ class LocalPeer {
     stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
   }
 
-  /// add media tracks from the local stream to the connection.
+  Future<void> setVideoCodec(String codecName) async {
+    var capabilities = await getRtpSenderCapabilities('video');
+    var selectedCodecs = capabilities.codecs
+            ?.where((c) =>
+                c.mimeType.toLowerCase().contains(codecName.toLowerCase()))
+            .toList() ??
+        [];
+
+    var transceivers = await connection?.getTransceivers();
+    if (transceivers != null) {
+      for (var transceiver in transceivers) {
+        if (transceiver.sender.track?.kind == 'video') {
+          await transceiver.setCodecPreferences(selectedCodecs);
+        }
+      }
+    }
+  }
+
   Future<void> addTracks() async {
     if (stream == null || connection == null) return;
-    // add video tracks
     for (var track in stream!.getVideoTracks()) {
       if (videoSender == null) {
         videoSender = await connection!.addTrack(track, stream!);
@@ -55,7 +69,6 @@ class LocalPeer {
         await videoSender!.replaceTrack(track);
       }
     }
-    // add audio tracks
     for (var track in stream!.getAudioTracks()) {
       if (audioSender == null) {
         audioSender = await connection!.addTrack(track, stream!);
@@ -65,7 +78,6 @@ class LocalPeer {
     }
   }
 
-  /// stop and remove tracks from the stream.
   Future<void> removeTracks(
       {bool removeVideo = false, bool removeAudio = false}) async {
     if (stream == null) return;
@@ -81,7 +93,6 @@ class LocalPeer {
     }
   }
 
-  /// clean up the connection and stream.
   Future<void> close() async {
     await stream?.dispose();
     await connection?.close();
