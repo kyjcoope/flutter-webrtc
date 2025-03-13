@@ -244,12 +244,18 @@ static FlutterWebRTCPlugin *sharedSingleton;
 #endif
 }
 
+- (void)setTrackIdForNextDecoder:(NSString*)trackId {
+    [CustomVideoDecoderFactory setTrackId:trackId];
+}
+
 - (void)initialize:(NSArray*)networkIgnoreMask
 bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
     // RTCSetMinDebugLogLevel(RTCLoggingSeverityVerbose);
     if (!_peerConnectionFactory) {
-        VideoDecoderFactory* decoderFactory = [[VideoDecoderFactory alloc] init];
+        VideoDecoderFactory* defaultDecoderFactory = [[VideoDecoderFactory alloc] init];
         VideoEncoderFactory* encoderFactory = [[VideoEncoderFactory alloc] init];
+
+        CustomVideoDecoderFactory* decoderFactory = [[CustomVideoDecoderFactory alloc] init];
 
         VideoEncoderFactorySimulcast* simulcastFactory =
             [[VideoEncoderFactorySimulcast alloc] initWithPrimary:encoderFactory fallback:encoderFactory];
