@@ -1,5 +1,5 @@
 #import "CustomVideoDecoderFactory.h"
-#import "VideoDecoderBypass.h"
+#import "RTCVideoDecoderBypass.h"
 #import <WebRTC/RTCVideoCodecInfo.h>
 
 @implementation CustomVideoDecoderFactory {
