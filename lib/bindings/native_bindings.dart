@@ -1,4 +1,5 @@
 import 'dart:ffi' as ffi;
+import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'encoded_webrtc_frame.dart';
@@ -30,8 +31,17 @@ typedef NativeBufferPopNative = ffi.Pointer<EncodedFrame> Function(
 typedef NativeBufferPopDart = ffi.Pointer<EncodedFrame> Function(
     ffi.Pointer<Utf8> key);
 
-final ffi.DynamicLibrary nativeLib =
-    ffi.DynamicLibrary.open("libnative_lib.so");
+final ffi.DynamicLibrary nativeLib = _loadLibrary();
+
+ffi.DynamicLibrary _loadLibrary() {
+  if (Platform.isAndroid) {
+    return ffi.DynamicLibrary.open("libnative_lib.so");
+  } else if (Platform.isIOS) {
+    return ffi.DynamicLibrary.process();
+  } else {
+    throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
+  }
+}
 
 final NativeBufferPopDart nativeBufferPop = nativeLib
     .lookup<ffi.NativeFunction<NativeBufferPopNative>>("popNativeBufferFFI")
