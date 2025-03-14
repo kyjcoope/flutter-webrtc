@@ -1,5 +1,5 @@
-#include "buffer/native_buffer_api.h"
-#include "buffer/NativeBuffer.h"
+#include "native_buffer_api.h"
+#include "NativeBuffer.h"
 #include <string>
 #include <unordered_map>
 

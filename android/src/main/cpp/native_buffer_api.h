@@ -1,0 +1,27 @@
+#ifndef NATIVE_BUFFER_API_H
+#define NATIVE_BUFFER_API_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#if defined(_WIN32)
+  #define FFI_PLUGIN_EXPORT __declspec(dllexport)
+#else
+  #define FFI_PLUGIN_EXPORT __attribute__((visibility("default")))
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+FFI_PLUGIN_EXPORT int initNativeBufferFFI(const char* key, int capacity, int maxBufferSize);
+FFI_PLUGIN_EXPORT unsigned long long pushNativeBufferFFI(const char* key, const uint8_t* buffer, int dataSize,
+  int width, int height, uint64_t frameTime, int rotation, int frameType);
+FFI_PLUGIN_EXPORT unsigned long long popNativeBufferFFI(const char* key);
+FFI_PLUGIN_EXPORT void freeNativeBufferFFI(const char* key);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // NATIVE_BUFFER_API_H

@@ -1,5 +1,5 @@
 #import "NativeBufferBridge.h"
-#include "../../common/cpp/include/buffer/native_buffer_api.h"
+#include "native_buffer_api.h"
 
 @implementation NativeBufferBridge
 
