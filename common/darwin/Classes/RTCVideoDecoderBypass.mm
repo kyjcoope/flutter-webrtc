@@ -1,8 +1,5 @@
 #import "RTCVideoDecoderBypass.h"
-#import <WebRTC/RTCMacros.h>
-#import <WebRTC/RTCVideoCodecInfo.h>
-#import <WebRTC/RTCCodecSpecificInfo.h>
-#import <WebRTC/RTCEncodedImage.h>
+#import <WebRTC/WebRTC.h>
 #import <CoreVideo/CoreVideo.h>
 
 #include "buffer/native_buffer_api.h"
@@ -10,7 +7,7 @@
 @implementation RTCVideoDecoderBypass {
     NSString *_trackId;
     BOOL _isRingBufferInitialized;
-    RTCVideoDecoderCallback _callback;
+    RTC_OBJC_TYPE(RTCVideoDecoderCallback) _callback;
 }
 
 - (instancetype)initWithTrackId:(NSString *)trackId {
@@ -38,9 +35,9 @@
     }
 }
 
-- (NSInteger)decode:(RTCEncodedImage *)inputImage
+- (NSInteger)decode:(RTC_OBJC_TYPE(RTCEncodedImage) *)inputImage
         missingFrames:(BOOL)missingFrames
-    codecSpecificInfo:(nullable id<RTCCodecSpecificInfo>)info
+    codecSpecificInfo:(nullable id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)info
          renderTimeMs:(int64_t)renderTimeMs {
     
     if (!inputImage) {
@@ -48,10 +45,7 @@
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
     
-    NSData *buffer = nil;
-    if ([inputImage respondsToSelector:@selector(buffer)]) {
-        buffer = [inputImage performSelector:@selector(buffer)];
-    }
+    NSData *buffer = [inputImage buffer];
     
     if (!buffer || buffer.length == 0) {
         NSLog(@"Frame buffer is null or empty");
@@ -74,26 +68,10 @@
     const uint8_t *bufferData = (const uint8_t *)buffer.bytes;
     int dataSize = (int)buffer.length;
     
-    int32_t width = 0;
-    int32_t height = 0;
-    int rotation = 0;
-    int frameType = 0;
-    
-    if ([inputImage respondsToSelector:@selector(encodedWidth)]) {
-        width = (int32_t)[inputImage performSelector:@selector(encodedWidth)];
-    }
-    
-    if ([inputImage respondsToSelector:@selector(encodedHeight)]) {
-        height = (int32_t)[inputImage performSelector:@selector(encodedHeight)];
-    }
-    
-    if ([inputImage respondsToSelector:@selector(rotation)]) {
-        rotation = (int)[inputImage performSelector:@selector(rotation)];
-    }
-    
-    if ([inputImage respondsToSelector:@selector(frameType)]) {
-        frameType = (int)[inputImage performSelector:@selector(frameType)];
-    }
+    int32_t width = (int32_t)[inputImage encodedWidth];
+    int32_t height = (int32_t)[inputImage encodedHeight];
+    int rotation = (int)[inputImage rotation];
+    int frameType = (int)[inputImage frameType];
     
     NSLog(@"Processing frame: size=%d, %dx%d, type=%d", dataSize, width, height, frameType);
     
@@ -114,7 +92,7 @@
     return WEBRTC_VIDEO_CODEC_OK;
 }
 
-- (void)setCallback:(RTCVideoDecoderCallback)callback {
+- (void)setCallback:(RTC_OBJC_TYPE(RTCVideoDecoderCallback))callback {
     _callback = callback;
 }
 
