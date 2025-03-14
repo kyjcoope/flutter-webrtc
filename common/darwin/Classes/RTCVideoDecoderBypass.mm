@@ -1,8 +1,7 @@
 #import "RTCVideoDecoderBypass.h"
 #import <WebRTC/WebRTC.h>
 #import <CoreVideo/CoreVideo.h>
-
-#include "buffer/native_buffer_api.h"
+#import "NativeBufferBridge.h"
 
 #define WEBRTC_VIDEO_CODEC_OK 0
 #define WEBRTC_VIDEO_CODEC_ERROR -1
@@ -34,7 +33,7 @@
 - (NSInteger)releaseDecoder {
     NSLog(@"Releasing decoder for trackId: %@", _trackId);
     if (_trackId != nil) {
-        freeNativeBufferFFI([_trackId UTF8String]);
+        [NativeBufferBridge freeBufferWithKey:_trackId];
     }
     return WEBRTC_VIDEO_CODEC_OK;
 }
@@ -60,7 +59,7 @@
         int bufferSize = 1024 * 1024 * 2 + 256; // 2MB + 256 bytes
         int capacity = 10;
         NSLog(@"Initialize native buffer: %@ with capacity: %d and buffer size: %d", _trackId, capacity, bufferSize);
-        int res = initNativeBufferFFI([_trackId UTF8String], capacity, bufferSize);
+        int res = [NativeBufferBridge initBufferWithKey:_trackId capacity:capacity maxBufferSize:bufferSize];
         if (res == 0) {
             NSLog(@"Failed to initialize native buffer");
             return WEBRTC_VIDEO_CODEC_ERROR;
@@ -69,24 +68,20 @@
         NSLog(@"Native buffer initialized with slot size: %d", bufferSize);
     }
     
-    const uint8_t *bufferData = (const uint8_t *)buffer.bytes;
-    int dataSize = (int)buffer.length;
-    
     int32_t width = (int32_t)[[inputImage performSelector:@selector(encodedWidth)] intValue];
     int32_t height = (int32_t)[[inputImage performSelector:@selector(encodedHeight)] intValue];
     int rotation = (int)[[inputImage performSelector:@selector(rotation)] intValue];
     int frameType = (int)[[inputImage performSelector:@selector(frameType)] intValue];
     
-    NSLog(@"Processing frame: size=%d, %dx%d, type=%d", dataSize, width, height, frameType);
+    NSLog(@"Processing frame: size=%d, %dx%d, type=%d", (int)buffer.length, width, height, frameType);
     
-    unsigned long long storedAddress = pushNativeBufferFFI([_trackId UTF8String], 
-                                                          bufferData,
-                                                          dataSize, 
-                                                          width, 
-                                                          height, 
-                                                          renderTimeMs, 
-                                                          rotation, 
-                                                          frameType);
+    unsigned long long storedAddress = [NativeBufferBridge pushBuffer:_trackId
+                                                              buffer:buffer
+                                                               width:width
+                                                              height:height
+                                                           frameTime:renderTimeMs
+                                                            rotation:rotation
+                                                           frameType:frameType];
     
     if (storedAddress == 0) {
         NSLog(@"Failed to store frame in native buffer");
