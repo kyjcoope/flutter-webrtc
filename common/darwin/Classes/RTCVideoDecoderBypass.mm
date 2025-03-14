@@ -1,20 +1,12 @@
 #import "RTCVideoDecoderBypass.h"
+#import <WebRTC/RTCMacros.h>
 #import <WebRTC/RTCVideoCodecInfo.h>
 #import <WebRTC/RTCVideoFrame.h>
 #import <WebRTC/RTCCodecSpecificInfo.h>
 #import <WebRTC/RTCEncodedImage.h>
 #import <CoreVideo/CoreVideo.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-int initNativeBufferFFI(const char* key, int capacity, int maxBufferSize);
-unsigned long long pushNativeBufferFFI(const char* key, const uint8_t* buffer, int dataSize,
-                                      int width, int height, uint64_t frameTime, int rotation, int frameType);
-void freeNativeBufferFFI(const char* key);
-#ifdef __cplusplus
-}
-#endif
+#include "buffer/native_buffer_api.h"
 
 @implementation RTCVideoDecoderBypass {
     NSString *_trackId;
@@ -25,7 +17,7 @@ void freeNativeBufferFFI(const char* key);
 - (instancetype)initWithTrackId:(NSString *)trackId {
     self = [super init];
     if (self) {
-        _trackId = trackId;
+        _trackId = trackId ? [trackId copy] : nil;
         _isRingBufferInitialized = NO;
     }
     return self;

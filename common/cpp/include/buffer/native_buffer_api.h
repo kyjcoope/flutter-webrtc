@@ -15,8 +15,8 @@ extern "C" {
 #endif
 
 FFI_PLUGIN_EXPORT int initNativeBufferFFI(const char* key, int capacity, int maxBufferSize);
-FFI_PLUGIN_EXPORT unsigned long long pushNativeBufferFFI(const char* key, uint8_t* buffer, int dataSize,
-    int width, int height, uint64_t frameTime, int rotation, int frameType);
+FFI_PLUGIN_EXPORT unsigned long long pushNativeBufferFFI(const char* key, const uint8_t* buffer, int dataSize,
+  int width, int height, uint64_t frameTime, int rotation, int frameType);
 FFI_PLUGIN_EXPORT unsigned long long popNativeBufferFFI(const char* key);
 FFI_PLUGIN_EXPORT void freeNativeBufferFFI(const char* key);
 

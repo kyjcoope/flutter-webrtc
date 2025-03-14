@@ -1,5 +1,5 @@
-#include "native_buffer_api.h"
-#include "NativeBuffer.h"
+#include "buffer/native_buffer_api.h"
+#include "buffer/NativeBuffer.h"
 #include <string>
 #include <unordered_map>
 
@@ -18,8 +18,8 @@ FFI_PLUGIN_EXPORT int initNativeBufferFFI(const char* key, int capacity, int max
     return 1;
 }
 
-FFI_PLUGIN_EXPORT unsigned long long pushNativeBufferFFI(const char* key, uint8_t* buffer, int dataSize,
-                                                         int width, int height, uint64_t frameTime, int rotation, int frameType) {
+FFI_PLUGIN_EXPORT unsigned long long pushNativeBufferFFI(const char* key, const uint8_t* buffer, int dataSize,
+    int width, int height, uint64_t frameTime, int rotation, int frameType) {
     if (!key || !buffer || dataSize <= 0) return 0;
     std::string skey(key);
     auto it = g_nativeBuffers.find(skey);

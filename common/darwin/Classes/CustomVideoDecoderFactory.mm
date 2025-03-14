@@ -1,9 +1,9 @@
 #import "CustomVideoDecoderFactory.h"
 #import "RTCVideoDecoderBypass.h"
+#import <WebRTC/RTCMacros.h>
 #import <WebRTC/RTCVideoCodecInfo.h>
 
 @implementation CustomVideoDecoderFactory {
-    dispatch_queue_t _trackQueueDispatchQueue;
 }
 
 static NSMutableArray<NSString *> *trackQueue;
@@ -23,9 +23,6 @@ static NSMutableArray<NSString *> *trackQueue;
 
 - (instancetype)init {
     self = [super init];
-    if (self) {
-        _trackQueueDispatchQueue = dispatch_queue_create("com.cloudwebrtc.trackqueue", DISPATCH_QUEUE_SERIAL);
-    }
     return self;
 }
 
