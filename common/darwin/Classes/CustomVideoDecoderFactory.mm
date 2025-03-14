@@ -1,6 +1,7 @@
 #import "CustomVideoDecoderFactory.h"
 #import "RTCVideoDecoderBypass.h"
-#import <WebRTC/WebRTC.h>
+#import <WebRTC/RTCMacros.h>
+#import <WebRTC/RTCVideoCodecInfo.h>
 
 @implementation CustomVideoDecoderFactory {
 }
@@ -25,7 +26,7 @@ static NSMutableArray<NSString *> *trackQueue;
     return self;
 }
 
-- (id<RTCVideoDecoder>)createDecoder:(RTCVideoCodecInfo *)info {
+- (id<RTC_OBJC_TYPE(RTCVideoDecoder)>)createDecoder:(RTC_OBJC_TYPE(RTCVideoCodecInfo) *)info {
     NSString *trackId = nil;
     
     @synchronized(trackQueue) {
@@ -41,10 +42,10 @@ static NSMutableArray<NSString *> *trackQueue;
     return [[RTCVideoDecoderBypass alloc] initWithTrackId:trackId];
 }
 
-- (NSArray<RTCVideoCodecInfo *> *)supportedCodecs {
-    RTCVideoCodecInfo *vp8 = [[RTCVideoCodecInfo alloc] initWithName:@"VP8"];
-    RTCVideoCodecInfo *vp9 = [[RTCVideoCodecInfo alloc] initWithName:@"VP9"];
-    RTCVideoCodecInfo *h264 = [[RTCVideoCodecInfo alloc] initWithName:@"H264"];
+- (NSArray<RTC_OBJC_TYPE(RTCVideoCodecInfo) *> *)supportedCodecs {
+    RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp8 = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:@"VP8"];
+    RTC_OBJC_TYPE(RTCVideoCodecInfo) *vp9 = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:@"VP9"];
+    RTC_OBJC_TYPE(RTCVideoCodecInfo) *h264 = [[RTC_OBJC_TYPE(RTCVideoCodecInfo) alloc] initWithName:@"H264"];
     
     return @[vp8, vp9, h264];
 }

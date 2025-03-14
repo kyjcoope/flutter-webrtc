@@ -7,7 +7,7 @@
 @implementation RTCVideoDecoderBypass {
     NSString *_trackId;
     BOOL _isRingBufferInitialized;
-    RTCVideoDecoderCallback _callback;
+    RTC_OBJC_TYPE(RTCVideoDecoderCallback) _callback;
 }
 
 - (instancetype)initWithTrackId:(NSString *)trackId {
@@ -28,16 +28,17 @@
     return YES;
 }
 
-- (void)releaseDecoder {
+- (NSInteger)releaseDecoder {
     NSLog(@"Releasing decoder for trackId: %@", _trackId);
     if (_trackId != nil) {
         freeNativeBufferFFI([_trackId UTF8String]);
     }
+    return WEBRTC_VIDEO_CODEC_OK;
 }
 
-- (NSInteger)decode:(RTCEncodedImage *)inputImage
+- (NSInteger)decode:(RTC_OBJC_TYPE(RTCEncodedImage) *)inputImage
         missingFrames:(BOOL)missingFrames
-    codecSpecificInfo:(nullable id<RTCCodecSpecificInfo>)info
+    codecSpecificInfo:(nullable id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)info
          renderTimeMs:(int64_t)renderTimeMs {
     
     if (!inputImage) {
@@ -92,7 +93,7 @@
     return WEBRTC_VIDEO_CODEC_OK;
 }
 
-- (void)setCallback:(RTCVideoDecoderCallback)callback {
+- (void)setCallback:(RTC_OBJC_TYPE(RTCVideoDecoderCallback))callback {
     _callback = callback;
 }
 
