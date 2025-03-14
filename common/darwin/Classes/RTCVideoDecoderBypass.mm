@@ -46,7 +46,8 @@
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
     
-    NSData *buffer = [inputImage buffer];
+    id encodedImage = inputImage;
+    NSData *buffer = [encodedImage performSelector:@selector(buffer)];
     
     if (!buffer || buffer.length == 0) {
         NSLog(@"Frame buffer is null or empty");
@@ -69,10 +70,10 @@
     const uint8_t *bufferData = (const uint8_t *)buffer.bytes;
     int dataSize = (int)buffer.length;
     
-    int32_t width = (int32_t)[inputImage encodedWidth];
-    int32_t height = (int32_t)[inputImage encodedHeight];
-    int rotation = (int)[inputImage rotation];
-    int frameType = (int)[inputImage frameType];
+    int32_t width = (int32_t)[[encodedImage performSelector:@selector(encodedWidth)] intValue];
+    int32_t height = (int32_t)[[encodedImage performSelector:@selector(encodedHeight)] intValue];
+    int rotation = (int)[[encodedImage performSelector:@selector(rotation)] intValue];
+    int frameType = (int)[[encodedImage performSelector:@selector(frameType)] intValue];
     
     NSLog(@"Processing frame: size=%d, %dx%d, type=%d", dataSize, width, height, frameType);
     
