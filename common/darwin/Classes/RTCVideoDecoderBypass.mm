@@ -66,10 +66,15 @@
     const uint8_t *bufferData = (const uint8_t *)encodedData.bytes;
     int dataSize = (int)encodedData.length;
     
-    int width = (int)inputImage.encodedWidth;
-    int height = (int)inputImage.encodedHeight;
-    int rotation = (int)inputImage.rotation;
-    int frameType = (int)inputImage.frameType;
+    int32_t width = 0;
+    int32_t height = 0;
+    int rotation = 0;
+    int frameType = 0;
+    
+    width = inputImage.encodedWidth;
+    height = inputImage.encodedHeight;
+    rotation = (int)inputImage.rotation;
+    frameType = (int)inputImage.frameType;
     
     NSLog(@"Processing frame: size=%d, %dx%d, type=%d", dataSize, width, height, frameType);
     
