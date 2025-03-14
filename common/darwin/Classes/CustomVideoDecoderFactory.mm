@@ -3,7 +3,6 @@
 #import <WebRTC/RTCVideoCodecInfo.h>
 
 @implementation CustomVideoDecoderFactory {
-    NSMutableArray<NSString *> *_trackQueue;
     dispatch_queue_t _trackQueueDispatchQueue;
 }
 
@@ -17,6 +16,7 @@ static NSMutableArray<NSString *> *trackQueue;
 
 + (void)setTrackId:(NSString *)trackId {
     @synchronized(trackQueue) {
+        NSLog(@"Adding trackId to queue: %@", trackId);
         [trackQueue addObject:trackId];
     }
 }
@@ -36,6 +36,9 @@ static NSMutableArray<NSString *> *trackQueue;
         if (trackQueue.count > 0) {
             trackId = trackQueue[0];
             [trackQueue removeObjectAtIndex:0];
+            NSLog(@"Creating decoder with trackId: %@", trackId);
+        } else {
+            NSLog(@"Warning: Creating decoder with no associated trackId");
         }
     }
     

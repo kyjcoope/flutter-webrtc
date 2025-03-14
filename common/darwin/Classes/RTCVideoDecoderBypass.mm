@@ -2,12 +2,14 @@
 #import <WebRTC/RTCVideoCodecInfo.h>
 #import <WebRTC/RTCVideoFrame.h>
 #import <WebRTC/RTCCodecSpecificInfo.h>
+#import <WebRTC/RTCEncodedImage.h>
+#import <CoreVideo/CoreVideo.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 int initNativeBufferFFI(const char* key, int capacity, int maxBufferSize);
-unsigned long long pushNativeBufferFFI(const char* key, uint8_t* buffer, int dataSize,
+unsigned long long pushNativeBufferFFI(const char* key, const uint8_t* buffer, int dataSize,
                                       int width, int height, uint64_t frameTime, int rotation, int frameType);
 void freeNativeBufferFFI(const char* key);
 #ifdef __cplusplus
@@ -50,9 +52,9 @@ void freeNativeBufferFFI(const char* key);
     codecSpecificInfo:(nullable id<RTCCodecSpecificInfo>)info
          renderTimeMs:(int64_t)renderTimeMs {
     
-    CVPixelBufferRef pixelBuffer = inputImage.buffer;
-    if (!pixelBuffer) {
-        NSLog(@"Frame buffer is null");
+    NSData *encodedData = inputImage.buffer;
+    if (!encodedData || encodedData.length == 0) {
+        NSLog(@"Frame buffer is null or empty");
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
     
@@ -69,23 +71,24 @@ void freeNativeBufferFFI(const char* key);
         NSLog(@"Native buffer initialized with slot size: %d", bufferSize);
     }
     
-    CVPixelBufferLockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+    const uint8_t *bufferData = (const uint8_t *)encodedData.bytes;
+    int dataSize = (int)encodedData.length;
     
-    uint8_t *bufferData = (uint8_t *)CVPixelBufferGetBaseAddress(pixelBuffer);
-    size_t dataSize = CVPixelBufferGetDataSize(pixelBuffer);
-    size_t width = CVPixelBufferGetWidth(pixelBuffer);
-    size_t height = CVPixelBufferGetHeight(pixelBuffer);
+    int width = (int)inputImage.encodedWidth;
+    int height = (int)inputImage.encodedHeight;
+    int rotation = (int)inputImage.rotation;
+    int frameType = (int)inputImage.frameType;
+    
+    NSLog(@"Processing frame: size=%d, %dx%d, type=%d", dataSize, width, height, frameType);
     
     unsigned long long storedAddress = pushNativeBufferFFI([_trackId UTF8String], 
-                                                          bufferData, 
-                                                          (int)dataSize, 
-                                                          (int)width, 
-                                                          (int)height, 
+                                                          bufferData,
+                                                          dataSize, 
+                                                          width, 
+                                                          height, 
                                                           renderTimeMs, 
-                                                          inputImage.rotation, 
-                                                          inputImage.frameType);
-    
-    CVPixelBufferUnlockBaseAddress(pixelBuffer, kCVPixelBufferLock_ReadOnly);
+                                                          rotation, 
+                                                          frameType);
     
     if (storedAddress == 0) {
         NSLog(@"Failed to store frame in native buffer");

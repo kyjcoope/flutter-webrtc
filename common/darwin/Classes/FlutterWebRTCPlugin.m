@@ -20,6 +20,7 @@
 #import "LocalTrack.h"
 #import "LocalAudioTrack.h"
 #import "LocalVideoTrack.h"
+#import "CustomVideoDecoderFactory.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wprotocol"
@@ -252,15 +253,17 @@ static FlutterWebRTCPlugin *sharedSingleton;
 bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
     // RTCSetMinDebugLogLevel(RTCLoggingSeverityVerbose);
     if (!_peerConnectionFactory) {
-        VideoDecoderFactory* defaultDecoderFactory = [[VideoDecoderFactory alloc] init];
+        _audioManager = [AudioManager sharedInstance];
+        [_audioManager dispose];
+        [_audioManager setManagementType:AudioManagementTypeNone];
+        
         VideoEncoderFactory* encoderFactory = [[VideoEncoderFactory alloc] init];
-
         CustomVideoDecoderFactory* decoderFactory = [[CustomVideoDecoderFactory alloc] init];
-
-        VideoEncoderFactorySimulcast* simulcastFactory =
+        
+        VideoEncoderFactorySimulcast* simulcastFactory = 
             [[VideoEncoderFactorySimulcast alloc] initWithPrimary:encoderFactory fallback:encoderFactory];
-
-        _peerConnectionFactory =
+        
+        _peerConnectionFactory = 
             [[RTCPeerConnectionFactory alloc] initWithBypassVoiceProcessing:bypassVoiceProcessing
                                                              encoderFactory:simulcastFactory
                                                              decoderFactory:decoderFactory
