@@ -254,8 +254,6 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
     // RTCSetMinDebugLogLevel(RTCLoggingSeverityVerbose);
     if (!_peerConnectionFactory) {
         _audioManager = [AudioManager sharedInstance];
-        [_audioManager dispose];
-        [_audioManager setManagementType:AudioManagementTypeNone];
         
         VideoEncoderFactory* encoderFactory = [[VideoEncoderFactory alloc] init];
         CustomVideoDecoderFactory* decoderFactory = [[CustomVideoDecoderFactory alloc] init];
