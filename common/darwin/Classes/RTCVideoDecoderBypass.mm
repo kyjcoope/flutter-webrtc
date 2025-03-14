@@ -1,7 +1,6 @@
 #import "RTCVideoDecoderBypass.h"
 #import <WebRTC/RTCMacros.h>
 #import <WebRTC/RTCVideoCodecInfo.h>
-#import <WebRTC/RTCVideoFrame.h>
 #import <WebRTC/RTCCodecSpecificInfo.h>
 #import <WebRTC/RTCEncodedImage.h>
 #import <CoreVideo/CoreVideo.h>
@@ -44,8 +43,17 @@
     codecSpecificInfo:(nullable id<RTCCodecSpecificInfo>)info
          renderTimeMs:(int64_t)renderTimeMs {
     
-    NSData *encodedData = [inputImage buffer];
-    if (!encodedData || encodedData.length == 0) {
+    if (!inputImage) {
+        NSLog(@"Input image is null");
+        return WEBRTC_VIDEO_CODEC_ERROR;
+    }
+    
+    NSData *buffer = nil;
+    if ([inputImage respondsToSelector:@selector(buffer)]) {
+        buffer = [inputImage performSelector:@selector(buffer)];
+    }
+    
+    if (!buffer || buffer.length == 0) {
         NSLog(@"Frame buffer is null or empty");
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
@@ -63,13 +71,29 @@
         NSLog(@"Native buffer initialized with slot size: %d", bufferSize);
     }
     
-    const uint8_t *bufferData = (const uint8_t *)encodedData.bytes;
-    int dataSize = (int)encodedData.length;
+    const uint8_t *bufferData = (const uint8_t *)buffer.bytes;
+    int dataSize = (int)buffer.length;
     
-    int32_t width = (int32_t)[inputImage encodedWidth];
-    int32_t height = (int32_t)[inputImage encodedHeight];
-    int rotation = (int)[inputImage rotation];
-    int frameType = (int)[inputImage frameType];
+    int32_t width = 0;
+    int32_t height = 0;
+    int rotation = 0;
+    int frameType = 0;
+    
+    if ([inputImage respondsToSelector:@selector(encodedWidth)]) {
+        width = (int32_t)[inputImage performSelector:@selector(encodedWidth)];
+    }
+    
+    if ([inputImage respondsToSelector:@selector(encodedHeight)]) {
+        height = (int32_t)[inputImage performSelector:@selector(encodedHeight)];
+    }
+    
+    if ([inputImage respondsToSelector:@selector(rotation)]) {
+        rotation = (int)[inputImage performSelector:@selector(rotation)];
+    }
+    
+    if ([inputImage respondsToSelector:@selector(frameType)]) {
+        frameType = (int)[inputImage performSelector:@selector(frameType)];
+    }
     
     NSLog(@"Processing frame: size=%d, %dx%d, type=%d", dataSize, width, height, frameType);
     

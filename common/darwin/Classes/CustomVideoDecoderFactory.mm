@@ -1,6 +1,5 @@
 #import "CustomVideoDecoderFactory.h"
 #import "RTCVideoDecoderBypass.h"
-#import <WebRTC/RTCMacros.h>
 #import <WebRTC/RTCVideoCodecInfo.h>
 
 @implementation CustomVideoDecoderFactory {
@@ -43,15 +42,11 @@ static NSMutableArray<NSString *> *trackQueue;
 }
 
 - (NSArray<RTCVideoCodecInfo *> *)supportedCodecs {
-    NSString *vp8Name = @"VP8";
-    NSString *vp9Name = @"VP9";
-    NSString *h264Name = @"H264";
+    RTCVideoCodecInfo *vp8 = [[RTCVideoCodecInfo alloc] initWithName:@"VP8"];
+    RTCVideoCodecInfo *vp9 = [[RTCVideoCodecInfo alloc] initWithName:@"VP9"];
+    RTCVideoCodecInfo *h264 = [[RTCVideoCodecInfo alloc] initWithName:@"H264"];
     
-    return @[
-        [[RTCVideoCodecInfo alloc] initWithName:vp8Name],
-        [[RTCVideoCodecInfo alloc] initWithName:vp9Name],
-        [[RTCVideoCodecInfo alloc] initWithName:h264Name]
-    ];
+    return @[vp8, vp9, h264];
 }
 
 @end
