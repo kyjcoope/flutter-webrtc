@@ -3,7 +3,7 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface CustomVideoDecoderFactory : NSObject <RTC_OBJC_TYPE(RTCVideoDecoderFactory)>
+@interface CustomVideoDecoderFactory : NSObject <RTCVideoDecoderFactory>
 
 + (void)setTrackId:(NSString *)trackId;
 
