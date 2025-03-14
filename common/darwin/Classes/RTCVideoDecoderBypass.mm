@@ -4,10 +4,13 @@
 
 #include "buffer/native_buffer_api.h"
 
+#define WEBRTC_VIDEO_CODEC_OK 0
+#define WEBRTC_VIDEO_CODEC_ERROR -1
+
 @implementation RTCVideoDecoderBypass {
     NSString *_trackId;
     BOOL _isRingBufferInitialized;
-    RTCVideoDecoderCallback _callback;
+    id _callback;
 }
 
 - (instancetype)initWithTrackId:(NSString *)trackId {
@@ -36,9 +39,9 @@
     return WEBRTC_VIDEO_CODEC_OK;
 }
 
-- (NSInteger)decode:(RTCEncodedImage *)inputImage
+- (NSInteger)decode:(id)inputImage 
         missingFrames:(BOOL)missingFrames
-    codecSpecificInfo:(nullable id<RTCCodecSpecificInfo>)info
+    codecSpecificInfo:(nullable id)info
          renderTimeMs:(int64_t)renderTimeMs {
     
     if (!inputImage) {
@@ -46,8 +49,7 @@
         return WEBRTC_VIDEO_CODEC_ERROR;
     }
     
-    id encodedImage = inputImage;
-    NSData *buffer = [encodedImage performSelector:@selector(buffer)];
+    NSData *buffer = [inputImage performSelector:@selector(buffer)];
     
     if (!buffer || buffer.length == 0) {
         NSLog(@"Frame buffer is null or empty");
@@ -70,10 +72,10 @@
     const uint8_t *bufferData = (const uint8_t *)buffer.bytes;
     int dataSize = (int)buffer.length;
     
-    int32_t width = (int32_t)[[encodedImage performSelector:@selector(encodedWidth)] intValue];
-    int32_t height = (int32_t)[[encodedImage performSelector:@selector(encodedHeight)] intValue];
-    int rotation = (int)[[encodedImage performSelector:@selector(rotation)] intValue];
-    int frameType = (int)[[encodedImage performSelector:@selector(frameType)] intValue];
+    int32_t width = (int32_t)[[inputImage performSelector:@selector(encodedWidth)] intValue];
+    int32_t height = (int32_t)[[inputImage performSelector:@selector(encodedHeight)] intValue];
+    int rotation = (int)[[inputImage performSelector:@selector(rotation)] intValue];
+    int frameType = (int)[[inputImage performSelector:@selector(frameType)] intValue];
     
     NSLog(@"Processing frame: size=%d, %dx%d, type=%d", dataSize, width, height, frameType);
     
@@ -94,7 +96,7 @@
     return WEBRTC_VIDEO_CODEC_OK;
 }
 
-- (void)setCallback:(RTCVideoDecoderCallback)callback {
+- (void)setCallback:(id)callback {
     _callback = callback;
 }
 
