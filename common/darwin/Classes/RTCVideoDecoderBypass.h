@@ -1,10 +1,9 @@
 #import <Foundation/Foundation.h>
-#import <WebRTC/RTCMacros.h>
-#import <WebRTC/RTCVideoDecoder.h>
+#import <WebRTC/WebRTC.h>
 
 NS_ASSUME_NONNULL_BEGIN
 
-@interface RTCVideoDecoderBypass : NSObject <RTC_OBJC_TYPE(RTCVideoDecoder)>
+@interface RTCVideoDecoderBypass : NSObject <RTCVideoDecoder>
 
 - (instancetype)initWithTrackId:(NSString * _Nullable)trackId;
 
