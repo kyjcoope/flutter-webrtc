@@ -44,56 +44,53 @@
         missingFrames:(BOOL)missingFrames
     codecSpecificInfo:(nullable id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)info
          renderTimeMs:(int64_t)renderTimeMs {
-
-    NSLog(@"SuperDecoder: Decode frame called");
+    
+    if (!encodedImage) {
+        NSLog(@"Input image is null");
+        return WEBRTC_VIDEO_CODEC_ERROR;
+    }
+    
+    NSData *buffer = encodedImage.buffer;
+    
+    if (!buffer || buffer.length == 0) {
+        NSLog(@"Frame buffer is null or empty");
+        return WEBRTC_VIDEO_CODEC_ERROR;
+    }
+    
+    if (!_isRingBufferInitialized) {
+        int bufferSize = 1024 * 1024 * 2 + 256; // 2MB + 256 bytes
+        int capacity = 10;
+        NSLog(@"Initialize native buffer: %@ with capacity: %d and buffer size: %d", _trackId, capacity, bufferSize);
+        int res = [NativeBufferBridge initBufferWithKey:_trackId capacity:capacity maxBufferSize:bufferSize];
+        if (res == 0) {
+            NSLog(@"Failed to initialize native buffer");
+            return WEBRTC_VIDEO_CODEC_ERROR;
+        }
+        _isRingBufferInitialized = YES;
+        NSLog(@"Native buffer initialized with slot size: %d", bufferSize);
+    }
+    
+    int32_t width = encodedImage.encodedWidth;
+    int32_t height = encodedImage.encodedHeight;
+    int rotation = encodedImage.rotation;
+    int frameType = encodedImage.frameType;
+    
+    NSLog(@"Processing frame: size=%d, %dx%d, type=%d", (int)buffer.length, width, height, frameType);
+    
+    unsigned long long storedAddress = [NativeBufferBridge pushBuffer:_trackId
+                                                              buffer:buffer
+                                                               width:width
+                                                              height:height
+                                                           frameTime:renderTimeMs
+                                                            rotation:rotation
+                                                           frameType:frameType];
+    
+    if (storedAddress == 0) {
+        NSLog(@"Failed to store frame in native buffer");
+        return WEBRTC_VIDEO_CODEC_ERROR;
+    }
+    
     return WEBRTC_VIDEO_CODEC_OK;
-    
-    // if (!encodedImage) {
-    //     NSLog(@"Input image is null");
-    //     return WEBRTC_VIDEO_CODEC_ERROR;
-    // }
-    
-    // NSData *buffer = encodedImage.buffer;
-    
-    // if (!buffer || buffer.length == 0) {
-    //     NSLog(@"Frame buffer is null or empty");
-    //     return WEBRTC_VIDEO_CODEC_ERROR;
-    // }
-    
-    // if (!_isRingBufferInitialized) {
-    //     int bufferSize = 1024 * 1024 * 2 + 256; // 2MB + 256 bytes
-    //     int capacity = 10;
-    //     NSLog(@"Initialize native buffer: %@ with capacity: %d and buffer size: %d", _trackId, capacity, bufferSize);
-    //     int res = [NativeBufferBridge initBufferWithKey:_trackId capacity:capacity maxBufferSize:bufferSize];
-    //     if (res == 0) {
-    //         NSLog(@"Failed to initialize native buffer");
-    //         return WEBRTC_VIDEO_CODEC_ERROR;
-    //     }
-    //     _isRingBufferInitialized = YES;
-    //     NSLog(@"Native buffer initialized with slot size: %d", bufferSize);
-    // }
-    
-    // int32_t width = encodedImage.encodedWidth;
-    // int32_t height = encodedImage.encodedHeight;
-    // int rotation = encodedImage.rotation;
-    // int frameType = encodedImage.frameType;
-    
-    // NSLog(@"Processing frame: size=%d, %dx%d, type=%d", (int)buffer.length, width, height, frameType);
-    
-    // unsigned long long storedAddress = [NativeBufferBridge pushBuffer:_trackId
-    //                                                           buffer:buffer
-    //                                                            width:width
-    //                                                           height:height
-    //                                                        frameTime:renderTimeMs
-    //                                                         rotation:rotation
-    //                                                        frameType:frameType];
-    
-    // if (storedAddress == 0) {
-    //     NSLog(@"Failed to store frame in native buffer");
-    //     return WEBRTC_VIDEO_CODEC_ERROR;
-    // }
-    
-    // return WEBRTC_VIDEO_CODEC_OK;
 }
 
 - (void)setCallback:(RTCVideoDecoderCallback)callback {
