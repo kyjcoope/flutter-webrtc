@@ -246,6 +246,7 @@ static FlutterWebRTCPlugin *sharedSingleton;
 }
 
 - (void)setTrackIdForNextDecoder:(NSString*)trackId {
+    NSLog(@"FlutterWebRTC: setTrackIdForNextDecoder");
     [CustomVideoDecoderFactory setTrackId:trackId];
 }
 
@@ -256,6 +257,7 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
         _audioManager = [AudioManager sharedInstance];
         
         VideoEncoderFactory* encoderFactory = [[VideoEncoderFactory alloc] init];
+        NSLog(@"FlutterWebRTC: CustomVideoDecoderFactory");
         CustomVideoDecoderFactory* decoderFactory = [[CustomVideoDecoderFactory alloc] init];
         
         VideoEncoderFactorySimulcast* simulcastFactory = 

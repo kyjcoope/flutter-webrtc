@@ -8,6 +8,7 @@
 static NSMutableArray<NSString *> *trackQueue;
 
 + (void)initialize {
+    NSLog(@"SuperDecoder: initialize");
     if (self == [CustomVideoDecoderFactory class]) {
         trackQueue = [NSMutableArray array];
     }
@@ -15,12 +16,13 @@ static NSMutableArray<NSString *> *trackQueue;
 
 + (void)setTrackId:(NSString *)trackId {
     @synchronized(trackQueue) {
-        NSLog(@"Adding trackId to queue: %@", trackId);
+        NSLog(@"SuperDecoder: Adding trackId to queue: %@", trackId);
         [trackQueue addObject:trackId];
     }
 }
 
 - (instancetype)init {
+    NSLog(@"SuperDecoder: init");
     self = [super init];
     return self;
 }
@@ -32,9 +34,9 @@ static NSMutableArray<NSString *> *trackQueue;
         if (trackQueue.count > 0) {
             trackId = trackQueue[0];
             [trackQueue removeObjectAtIndex:0];
-            NSLog(@"Creating decoder with trackId: %@", trackId);
+            NSLog(@"SuperDecoder: Creating decoder with trackId: %@", trackId);
         } else {
-            NSLog(@"Warning: Creating decoder with no associated trackId");
+            NSLog(@"SuperDecoder: Warning: Creating decoder with no associated trackId");
         }
     }
     
@@ -42,6 +44,7 @@ static NSMutableArray<NSString *> *trackQueue;
 }
 
 - (NSArray<RTCVideoCodecInfo *> *)supportedCodecs {
+    NSLog(@"SuperDecoder: supportedCodecs");
     RTCVideoCodecInfo *vp8 = [[RTCVideoCodecInfo alloc] initWithName:@"VP8"];
     RTCVideoCodecInfo *vp9 = [[RTCVideoCodecInfo alloc] initWithName:@"VP9"];
     RTCVideoCodecInfo *h264 = [[RTCVideoCodecInfo alloc] initWithName:@"H264"];

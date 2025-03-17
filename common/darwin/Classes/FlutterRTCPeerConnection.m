@@ -628,7 +628,7 @@
   if (track != nil && [track.kind isEqualToString:kRTCMediaStreamTrackKindVideo]) {
     FlutterWebRTCPlugin* plugin = (FlutterWebRTCPlugin*)peerConnection.delegate;
     [plugin setTrackIdForNextDecoder:track.trackId];
-    NSLog(@"Set decoder track ID: %@", track.trackId);
+    NSLog(@"FlutterRTCPeerConnection: Set decoder track ID: %@", track.trackId);
   }
 
   for (RTCMediaStream* stream in mediaStreams) {

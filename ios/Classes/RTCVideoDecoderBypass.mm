@@ -13,6 +13,7 @@
 }
 
 - (instancetype)initWithTrackId:(NSString *)trackId {
+    NSLog(@"SuperDecoder: initWithTrackId");
     self = [super init];
     if (self) {
         _trackId = trackId ? [trackId copy] : nil;
@@ -22,16 +23,17 @@
 }
 
 - (void)dealloc {
+    NSLog(@"SuperDecoder: dealloc");
     [self releaseDecoder];
 }
 
 - (BOOL)startDecodeWithNumberOfCores:(int)numberOfCores {
-    NSLog(@"Initializing decoder for trackId: %@", _trackId);
+    NSLog(@"SuperDecoder: Initializing decoder for trackId: %@", _trackId);
     return YES;
 }
 
 - (NSInteger)releaseDecoder {
-    NSLog(@"Releasing decoder for trackId: %@", _trackId);
+    NSLog(@"SuperDecoder: Releasing decoder for trackId: %@", _trackId);
     if (_trackId != nil) {
         [NativeBufferBridge freeBufferWithKey:_trackId];
     }
@@ -43,7 +45,7 @@
     codecSpecificInfo:(nullable id)info
          renderTimeMs:(int64_t)renderTimeMs {
 
-    NSLog(@"Decode frame called");
+    NSLog(@"SuperDecoder: Decode frame called");
     return WEBRTC_VIDEO_CODEC_OK;
     
     // if (!inputImage) {
@@ -95,6 +97,7 @@
 }
 
 - (void)setCallback:(id)callback {
+    NSLog(@"SuperDecoder: setCallback");
     _callback = callback;
 }
 
