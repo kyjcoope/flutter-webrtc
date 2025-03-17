@@ -51,11 +51,28 @@
     }
     
     NSData *buffer = encodedImage.buffer;
-    if (buffer.length >= 10) {
+    if (buffer.length > 0) {
         const uint8_t *bytes = (const uint8_t *)[buffer bytes];
-        NSLog(@"First 10 bytes: %d %d %d %d %d %d %d %d %d %d", 
-            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
-            bytes[5], bytes[6], bytes[7], bytes[8], bytes[9]);
+        NSLog(@"Buffer size: %lu bytes", (unsigned long)buffer.length);
+        
+        // Print first 100 bytes in rows of 10 bytes each
+        int bytesToShow = MIN(100, (int)buffer.length);
+        for (int i = 0; i < bytesToShow; i += 10) {
+            int remaining = MIN(10, bytesToShow - i);
+            if (remaining == 10) {
+                NSLog(@"Bytes %d-%d: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x", 
+                    i, i+9,
+                    bytes[i+0], bytes[i+1], bytes[i+2], bytes[i+3], bytes[i+4], 
+                    bytes[i+5], bytes[i+6], bytes[i+7], bytes[i+8], bytes[i+9]);
+            } else {
+                // Handle partial row (less than 10 bytes remaining)
+                NSMutableString *bytesStr = [NSMutableString string];
+                for (int j = 0; j < remaining; j++) {
+                    [bytesStr appendFormat:@"%02x ", bytes[i+j]];
+                }
+                NSLog(@"Bytes %d-%d: %@", i, i+remaining-1, bytesStr);
+            }
+        }
     }
     
     if (!buffer || buffer.length == 0) {
