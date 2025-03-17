@@ -51,30 +51,6 @@
     }
     
     NSData *buffer = encodedImage.buffer;
-    if (buffer.length > 0) {
-        const uint8_t *bytes = (const uint8_t *)[buffer bytes];
-        NSLog(@"Buffer size: %lu bytes", (unsigned long)buffer.length);
-        
-        // Print first 100 bytes in rows of 10 bytes each
-        int bytesToShow = MIN(100, (int)buffer.length);
-        for (int i = 0; i < bytesToShow; i += 10) {
-            int remaining = MIN(10, bytesToShow - i);
-            if (remaining == 10) {
-                NSLog(@"Bytes %d-%d: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x", 
-                    i, i+9,
-                    bytes[i+0], bytes[i+1], bytes[i+2], bytes[i+3], bytes[i+4], 
-                    bytes[i+5], bytes[i+6], bytes[i+7], bytes[i+8], bytes[i+9]);
-            } else {
-                // Handle partial row (less than 10 bytes remaining)
-                NSMutableString *bytesStr = [NSMutableString string];
-                for (int j = 0; j < remaining; j++) {
-                    [bytesStr appendFormat:@"%02x ", bytes[i+j]];
-                }
-                NSLog(@"Bytes %d-%d: %@", i, i+remaining-1, bytesStr);
-            }
-        }
-    }
-    
     if (!buffer || buffer.length == 0) {
         NSLog(@"Frame buffer is null or empty");
         return WEBRTC_VIDEO_CODEC_ERROR;
@@ -97,8 +73,6 @@
     int32_t height = encodedImage.encodedHeight;
     int rotation = encodedImage.rotation;
     int frameType = encodedImage.frameType;
-    
-    //NSLog(@"Processing frame: size=%d, %dx%d, type=%d", (int)buffer.length, width, height, frameType);
     
     unsigned long long storedAddress = [NativeBufferBridge pushBuffer:_trackId
                                                               buffer:buffer
