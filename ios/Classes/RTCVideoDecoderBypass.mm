@@ -52,7 +52,7 @@
     
     NSData *buffer = encodedImage.buffer;
     if (buffer.length >= 10) {
-        const uint8_t *bytes = [buffer bytes];
+        const uint8_t *bytes = (const uint8_t *)[buffer bytes];
         NSLog(@"First 10 bytes: %d %d %d %d %d %d %d %d %d %d", 
             bytes[0], bytes[1], bytes[2], bytes[3], bytes[4],
             bytes[5], bytes[6], bytes[7], bytes[8], bytes[9]);
