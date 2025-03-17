@@ -47,11 +47,10 @@ static NSMutableArray<NSString *> *trackQueue;
 
 - (NSArray<RTCVideoCodecInfo *> *)supportedCodecs {
     RTCVideoCodecInfo *h264 = [[RTCVideoCodecInfo alloc] initWithName:@"H264"];
-    //RTCVideoCodecInfo *vp8 = [[RTCVideoCodecInfo alloc] initWithName:@"VP8"];
-    //RTCVideoCodecInfo *vp9 = [[RTCVideoCodecInfo alloc] initWithName:@"VP9"];
+    RTCVideoCodecInfo *vp8 = [[RTCVideoCodecInfo alloc] initWithName:@"VP8"];
+    RTCVideoCodecInfo *vp9 = [[RTCVideoCodecInfo alloc] initWithName:@"VP9"];
 
-    return @[h264];
-    //return @[h264, vp8, vp9];
+    return @[h264, vp8, vp9];
 }
 
 @end
