@@ -28,6 +28,8 @@ static NSMutableArray<NSString *> *trackQueue;
 }
 
 - (id<RTCVideoDecoder>)createDecoder:(RTCVideoCodecInfo *)info {
+    NSLog(@"SuperDecoder: Creating decoder for codec: %@", info.name);
+    NSLog(@"SuperDecoder: Codec parameters: %@", info.parameters);
     NSString *trackId = nil;
     
     @synchronized(trackQueue) {
