@@ -44,6 +44,14 @@
         missingFrames:(BOOL)missingFrames
     codecSpecificInfo:(nullable id<RTC_OBJC_TYPE(RTCCodecSpecificInfo)>)info
          renderTimeMs:(int64_t)renderTimeMs {
+
+    if (info) {
+        NSLog(@"Received codec specific info");
+        // Note: RTCCodecSpecificInfo is a protocol, actual implementation may vary
+        if ([info respondsToSelector:@selector(codecName)]) {
+            NSLog(@"Codec name: %@", [info performSelector:@selector(codecName)]);
+        } 
+    }
     
     if (!encodedImage) {
         NSLog(@"Input image is null");
