@@ -77,6 +77,18 @@
     NSLog(@"Frame info - width: %d, height: %d, rotation: %d, frameType: %d, bufferSize: %lu", 
           width, height, rotation, frameType, (unsigned long)buffer.length);
     
+    NSLog(@"First 10 bytes: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
+        ((uint8_t*)buffer.bytes)[0],
+        ((uint8_t*)buffer.bytes)[1], 
+        ((uint8_t*)buffer.bytes)[2],
+        ((uint8_t*)buffer.bytes)[3],
+        ((uint8_t*)buffer.bytes)[4],
+        ((uint8_t*)buffer.bytes)[5],
+        ((uint8_t*)buffer.bytes)[6],
+        ((uint8_t*)buffer.bytes)[7],
+        ((uint8_t*)buffer.bytes)[8],
+        ((uint8_t*)buffer.bytes)[9]);
+    
     unsigned long long storedAddress = [NativeBufferBridge pushBuffer:_trackId
                                                               buffer:buffer
                                                                width:width
