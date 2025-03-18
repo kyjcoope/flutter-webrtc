@@ -74,6 +74,9 @@
     int rotation = encodedImage.rotation;
     int frameType = encodedImage.frameType;
     
+    NSLog(@"Frame info - width: %d, height: %d, rotation: %d, frameType: %d, bufferSize: %lu", 
+          width, height, rotation, frameType, (unsigned long)buffer.length);
+    
     unsigned long long storedAddress = [NativeBufferBridge pushBuffer:_trackId
                                                               buffer:buffer
                                                                width:width
