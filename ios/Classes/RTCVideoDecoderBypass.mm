@@ -35,7 +35,7 @@
 - (NSInteger)releaseDecoder {
     NSLog(@"SuperDecoder: Releasing decoder for trackId: %@", _trackId);
     if (_trackId != nil) {
-        [NativeBufferBridge freeBufferWithKey:_trackId];
+        [NativeBufferBridge freeBuffer:_trackId];
     }
     return WEBRTC_VIDEO_CODEC_OK;
 }
@@ -68,7 +68,7 @@
         int bufferSize = 1024 * 1024 * 2 + 256; // 2MB + 256 bytes
         int capacity = 10;
         NSLog(@"Initialize native buffer: %@ with capacity: %d and buffer size: %d", _trackId, capacity, bufferSize);
-        int res = [NativeBufferBridge initBufferWithKey:_trackId capacity:capacity maxBufferSize:bufferSize];
+        int res = [NativeBufferBridge initializeBuffer:_trackId capacity:capacity maxBufferSize:bufferSize]; // Fixed method name
         if (res == 0) {
             NSLog(@"Failed to initialize native buffer");
             return WEBRTC_VIDEO_CODEC_ERROR;
@@ -97,7 +97,7 @@
         ((uint8_t*)buffer.bytes)[8],
         ((uint8_t*)buffer.bytes)[9]);
     
-    unsigned long long storedAddress = [NativeBufferBridge pushBuffer:_trackId
+    unsigned long long storedAddress = [NativeBufferBridge pushVideoBuffer:_trackId
                                                               buffer:buffer
                                                                width:width
                                                               height:height
