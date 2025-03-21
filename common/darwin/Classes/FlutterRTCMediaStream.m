@@ -8,6 +8,7 @@
 #import "LocalVideoTrack.h"
 #import "LocalAudioTrack.h"
 #import "NativeBufferBridge.h"
+#import "AudioManager.h"
 
 @implementation RTCAudioInterceptor {
     BOOL _initialized;
