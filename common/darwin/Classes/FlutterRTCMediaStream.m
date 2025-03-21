@@ -111,6 +111,14 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
     return @{};
 }
 
+- (RTCAudioInterceptor *)audioInterceptor {
+    return objc_getAssociatedObject(self, @selector(audioInterceptor));
+}
+
+- (void)setAudioInterceptor:(RTCAudioInterceptor *)audioInterceptor {
+    objc_setAssociatedObject(self, @selector(audioInterceptor), audioInterceptor, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
 
 - (RTCMediaConstraints*)defaultMediaStreamConstraints {
   RTCMediaConstraints* constraints =
