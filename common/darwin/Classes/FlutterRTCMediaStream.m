@@ -18,15 +18,17 @@
     self = [super init];
     if (self) {
         _initialized = NO;
-        NSLog(@"RTCAudioInterceptor initialized");
+        NSLog(@"TESTING_AUDIO: RTCAudioInterceptor initialized");
     }
     return self;
 }
 
 - (void)renderPCMBuffer:(AVAudioPCMBuffer *)pcmBuffer {
+  NSLog(@"TESTING_AUDIO: renderPCMBuffer");
     NSString* audioBufferKey = @"webrtc_audio_output";
     
     if (!_initialized) {
+        NSLog(@"TESTING_AUDIO: initializing native audio buffer");
         int capacity = 10;
         int maxBufferSize = 48000 * 2 * 5;
         
@@ -35,7 +37,7 @@
                                                maxBufferSize:maxBufferSize];
         
         if (!_initialized) {
-            NSLog(@"Failed to initialize native audio buffer");
+            NSLog(@"TESTING_AUDIO: Failed to initialize native audio buffer");
             return;
         }
     }
@@ -1052,7 +1054,7 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
 }
 
 - (void)startAudioInterception {
-    NSLog(@"Starting audio interception");
+    NSLog(@"TESTING_AUDIO: Starting audio interception");
     
     if (!self.audioInterceptor) {
         self.audioInterceptor = [[RTCAudioInterceptor alloc] init];
@@ -1064,7 +1066,7 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
 }
 
 - (void)stopAudioInterception {
-    NSLog(@"Stopping audio interception");
+    NSLog(@"TESTING_AUDIO: Stopping audio interception");
     
     if (self.audioInterceptor) {
         [[AudioManager sharedInstance] removeRemoteAudioSink:self.audioInterceptor];
