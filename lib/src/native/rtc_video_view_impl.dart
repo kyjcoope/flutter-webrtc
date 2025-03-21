@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/bindings/encoded_webrtc_frame.dart';
+import 'package:flutter_webrtc/bindings/media_frame.dart';
 import 'package:flutter_webrtc/bindings/native_bindings.dart';
 
 import 'package:webrtc_interface/webrtc_interface.dart';
@@ -64,10 +64,16 @@ class _RTCVideoView extends State<RTCVideoView> {
     _frameTimer = Timer.periodic(Duration(milliseconds: 16), (timer) {
       try {
         if (widget.trackId == null) return;
-        EncodedWebRTCFrame? frame = popFrameFromTrack(widget.trackId!);
-        if (frame == null) return;
-        dev.log(
-            'FRAME: ${frame.width}x${frame.height}, time: ${frame.frameTime}');
+        EncodedVideoFrame? videoFrame = popFrameFromTrack(widget.trackId!);
+        EncodedAudioFrame? audioFrame = popAudioFrame();
+        if (videoFrame != null) {
+          dev.log(
+              'FRAME: ${videoFrame.width}x${videoFrame.height}, length: ${videoFrame.buffer.length}');
+        }
+        if (audioFrame != null) {
+          dev.log(
+              'AUDIO FRAME: ${audioFrame.sampleRate}, length: ${audioFrame.buffer.length}');
+        }
       } catch (e) {
         print("Error pulling frame: $e");
       }

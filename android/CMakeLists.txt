@@ -9,6 +9,7 @@ add_library(native_lib SHARED
     ${CMAKE_SOURCE_DIR}/src/main/cpp/NativeBuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/main/cpp/native_buffer_api.cpp
     ${CMAKE_SOURCE_DIR}/src/main/cpp/VideoDecoderBypassJNI.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/cpp/AudioBufferUtilJNI.cpp
 )
 
 find_library(log-lib log)

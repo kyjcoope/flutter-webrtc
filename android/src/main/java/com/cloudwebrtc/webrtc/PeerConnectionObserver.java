@@ -477,7 +477,6 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
       params.putString("trackId", track.id());
 
       String trackId = track.id();
-      CustomVideoDecoderFactory.setTrackId(trackId);
       ConstraintsMap trackInfo = new ConstraintsMap();
       trackInfo.putString("id", trackId);
       trackInfo.putString("label", track.kind());
@@ -490,6 +489,8 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
       if ("audio".equals(track.kind())) {
         AudioSwitchManager.instance.start();
+      } else if ("video".equals(track.kind())) {
+        CustomVideoDecoderFactory.setTrackId(trackId);
       }
     }
 

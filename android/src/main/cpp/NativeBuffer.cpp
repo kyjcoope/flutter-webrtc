@@ -10,25 +10,26 @@ NativeBuffer* nativeBufferInit(int capacity, int maxBufferSize) {
     rb->writeIndex = 0;
     rb->readIndex = 0;
     rb->count = 0;
-    rb->frames = (EncodedFrame**)malloc(capacity * sizeof(EncodedFrame*));
+    rb->frames = (MediaFrame**)malloc(capacity * sizeof(MediaFrame*));
     if (!rb->frames) {
         free(rb);
         return NULL;
     }
 
     for (int i = 0; i < capacity; i++) {
-       rb->frames[i] = (EncodedFrame*)malloc(sizeof(EncodedFrame));
+       rb->frames[i] = (MediaFrame*)malloc(sizeof(MediaFrame));
        if (!rb->frames[i]) {
           for (int j = 0; j < i; j++) free(rb->frames[j]);
           free(rb->frames);
           free(rb);
           return NULL;
        }
-       rb->frames[i]->width = 0;
-       rb->frames[i]->height = 0;
+       rb->frames[i]->mediaType = MEDIA_TYPE_VIDEO;
        rb->frames[i]->frameTime = 0;
-       rb->frames[i]->rotation = 0;
-       rb->frames[i]->frameType = 0;
+       rb->frames[i]->metadata.video.width = 0;
+       rb->frames[i]->metadata.video.height = 0;
+       rb->frames[i]->metadata.video.rotation = 0;
+       rb->frames[i]->metadata.video.frameType = 0;
        rb->frames[i]->bufferSize = 0;
        rb->frames[i]->buffer = (uint8_t*)malloc(maxBufferSize);
        if (!rb->frames[i]->buffer) {
@@ -47,7 +48,7 @@ NativeBuffer* nativeBufferInit(int capacity, int maxBufferSize) {
 }
 
 int nativeBufferPush(NativeBuffer* rb, const uint8_t* data, int dataSize,
-                   int width, int height, uint64_t frameTime, int rotation, int frameType) {
+                    int width, int height, uint64_t frameTime, int rotation, int frameType) {
     pthread_mutex_lock(&rb->mutex);
     while (rb->count == rb->capacity) {
        pthread_cond_wait(&rb->notFull, &rb->mutex);
@@ -57,14 +58,15 @@ int nativeBufferPush(NativeBuffer* rb, const uint8_t* data, int dataSize,
       return -1;
     }
 
-    EncodedFrame* frame = rb->frames[rb->writeIndex];
+    MediaFrame* frame = rb->frames[rb->writeIndex];
     memcpy(frame->buffer, data, dataSize);
     frame->bufferSize = dataSize;
-    frame->width = width;
-    frame->height = height;
+    frame->mediaType = MEDIA_TYPE_VIDEO;
     frame->frameTime = frameTime;
-    frame->rotation = rotation;
-    frame->frameType = frameType;
+    frame->metadata.video.width = width;
+    frame->metadata.video.height = height;
+    frame->metadata.video.rotation = rotation;
+    frame->metadata.video.frameType = frameType;
     
     rb->writeIndex = (rb->writeIndex + 1) % rb->capacity;
     rb->count++;
@@ -73,13 +75,39 @@ int nativeBufferPush(NativeBuffer* rb, const uint8_t* data, int dataSize,
     return 0;
 }
 
-EncodedFrame* nativeBufferPop(NativeBuffer* rb) {
+int nativeBufferPushAudio(NativeBuffer* rb, const uint8_t* data, int dataSize,
+                         int sampleRate, int channels, uint64_t frameTime) {
+    pthread_mutex_lock(&rb->mutex);
+    while (rb->count == rb->capacity) {
+       pthread_cond_wait(&rb->notFull, &rb->mutex);
+    }
+    if (dataSize > rb->maxBufferSize) {
+      pthread_mutex_unlock(&rb->mutex);
+      return -1;
+    }
+
+    MediaFrame* frame = rb->frames[rb->writeIndex];
+    memcpy(frame->buffer, data, dataSize);
+    frame->bufferSize = dataSize;
+    frame->mediaType = MEDIA_TYPE_AUDIO;
+    frame->frameTime = frameTime;
+    frame->metadata.audio.sampleRate = sampleRate;
+    frame->metadata.audio.channels = channels;
+    
+    rb->writeIndex = (rb->writeIndex + 1) % rb->capacity;
+    rb->count++;
+    pthread_cond_signal(&rb->notEmpty);
+    pthread_mutex_unlock(&rb->mutex);
+    return 0;
+}
+
+MediaFrame* nativeBufferPop(NativeBuffer* rb) {
     if (!rb) return NULL;
     pthread_mutex_lock(&rb->mutex);
     while (rb->count == 0) {
        pthread_cond_wait(&rb->notEmpty, &rb->mutex);
     }
-    EncodedFrame* frame = rb->frames[rb->readIndex];
+    MediaFrame* frame = rb->frames[rb->readIndex];
     rb->readIndex = (rb->readIndex + 1) % rb->capacity;
     rb->count--;
     pthread_cond_signal(&rb->notFull);

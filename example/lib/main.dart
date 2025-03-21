@@ -1,9 +1,9 @@
 import 'dart:core';
 import 'package:flutter/material.dart';
 
-import 'simple_loop_back.dart';
+import 'frame_capture_sample.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MaterialApp(home: LoopBackSample()));
+  runApp(MaterialApp(home: FrameCaptureSample()));
 }

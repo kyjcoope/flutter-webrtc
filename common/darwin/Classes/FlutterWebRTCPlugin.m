@@ -292,6 +292,8 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
         }
 
         [_peerConnectionFactory setOptions: options];
+
+        [self startAudioInterception];
     }
 }
 
@@ -1513,6 +1515,7 @@ bypassVoiceProcessing:(BOOL)bypassVoiceProcessing {
 }
 
 - (void)dealloc {
+  [self stopAudioInterception];
   [_localTracks removeAllObjects];
   _localTracks = nil;
   [_localStreams removeAllObjects];

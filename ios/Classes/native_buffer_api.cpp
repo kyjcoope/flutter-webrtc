@@ -35,6 +35,23 @@ FFI_PLUGIN_EXPORT unsigned long long pushNativeBufferFFI(const char* key, const 
     return reinterpret_cast<unsigned long long>(rb->frames[slot]);
 }
 
+FFI_PLUGIN_EXPORT unsigned long long pushAudioNativeBufferFFI(const char* key, const uint8_t* buffer, int dataSize,
+    int sampleRate, int channels, uint64_t frameTime) {
+    if (!key || !buffer || dataSize <= 0) return 0;
+    std::string skey(key);
+    auto it = g_nativeBuffers.find(skey);
+    if (it == g_nativeBuffers.end()) {
+        return 0;
+    }
+    NativeBuffer* rb = it->second;
+    int res = nativeBufferPushAudio(rb, buffer, dataSize, sampleRate, channels, frameTime);
+    if (res != 0) {
+       return 0;
+    }
+    int slot = (rb->writeIndex - 1 + rb->capacity) % rb->capacity;
+    return reinterpret_cast<unsigned long long>(rb->frames[slot]);
+}
+
 FFI_PLUGIN_EXPORT unsigned long long popNativeBufferFFI(const char* key) {
     if (!key) return 0;
     std::string skey(key);
@@ -43,7 +60,7 @@ FFI_PLUGIN_EXPORT unsigned long long popNativeBufferFFI(const char* key) {
         return 0;
     }
     NativeBuffer* rb = it->second;
-    EncodedFrame* frame = nativeBufferPop(rb);
+    MediaFrame* frame = nativeBufferPop(rb);
     return reinterpret_cast<unsigned long long>(frame);
 }
 
