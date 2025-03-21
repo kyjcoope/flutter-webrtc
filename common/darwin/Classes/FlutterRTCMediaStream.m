@@ -1049,7 +1049,7 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
     if (!self.audioInterceptor) {
         self.audioInterceptor = [[RTCAudioInterceptor alloc] init];
         
-        [[AudioManager sharedInstance] addRemoteAudioRenderer:self.audioInterceptor];
+        [[AudioManager sharedInstance] addRemoteAudioSink:self.audioInterceptor];
         
         NSLog(@"TESTING_AUDIO: Audio renderer added to AudioManager");
     }
@@ -1059,7 +1059,7 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
     NSLog(@"Stopping audio interception");
     
     if (self.audioInterceptor) {
-        [[AudioManager sharedInstance] removeRemoteAudioRenderer:self.audioInterceptor];
+        [[AudioManager sharedInstance] removeRemoteAudioSink:self.audioInterceptor];
         self.audioInterceptor = nil;
         
         NSLog(@"TESTING_AUDIO: Audio renderer removed from AudioManager");
