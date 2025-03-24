@@ -29,7 +29,7 @@
     
     if (!_initialized) {
         NSLog(@"TESTING_AUDIO: initializing native audio buffer");
-        int capacity = 10;
+        int capacity = 30;
         int maxBufferSize = 48000 * 2 * 5;
         
         _initialized = [NativeBufferBridge initializeBuffer:audioBufferKey 

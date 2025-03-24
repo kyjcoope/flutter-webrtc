@@ -223,7 +223,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     playbackSamplesReadyCallbackAdapter.addCallback(new JavaAudioDeviceModule.PlaybackSamplesReadyCallback() {
       @Override
       public void onWebRtcAudioTrackSamplesReady(JavaAudioDeviceModule.AudioSamples audioSamples) {
-        if (!AudioBufferUtil.ensureInitialized(10, 48000 * 2 * 5)) {
+        if (!AudioBufferUtil.ensureInitialized(30, 48000 * 2 * 5)) {
             Log.e(TAG, "Failed to initialize native audio buffer");
             return;
         }
