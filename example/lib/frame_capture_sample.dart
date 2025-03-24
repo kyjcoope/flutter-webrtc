@@ -16,6 +16,13 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
   final LocalPeer _localPeer = LocalPeer();
   final RemotePeer _remotePeer = RemotePeer();
 
+  // Add renderer for remote audio/video
+  //final RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
+  MediaStream? _remoteStream;
+
+  // Add volume control
+  double _volume = 0.7;
+
   Timer? _frameTimer;
   final List<String> _logs = [];
   final ScrollController _scrollController = ScrollController();
@@ -24,11 +31,31 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
   bool _capturingFrames = false;
 
   @override
+  void initState() {
+    super.initState();
+    _initRenderers();
+  }
+
+  Future<void> _initRenderers() async {
+    //await _remoteRenderer.initialize();
+    _addLog('Renderer initialized');
+  }
+
+  @override
   void dispose() {
     _stopFrameCapture();
     _hangUp();
+    //_remoteRenderer.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // Volume control for device - real volume must be controlled from device
+  void _updateVolume() {
+    setState(() {
+      // Volume changes need to be handled by system volume controls
+      _addLog('Volume set to: ${(_volume * 100).toInt()}%');
+    });
   }
 
   void _addLog(String message) {
@@ -55,10 +82,81 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
   Future<void> _makeCall() async {
     _addLog('Initializing connection...');
     await _localPeer.initConnection();
-    await _remotePeer.initConnection((RTCTrackEvent event) {
+
+    _frameTimer = Timer.periodic(Duration(milliseconds: 10), (timer) {
+      try {
+        // Get track IDs from the local peer streams
+        // String? videoTrackId;
+        // if (_localPeer.stream != null) {
+        //   var videoTracks = _localPeer.stream!.getVideoTracks();
+        //   if (videoTracks.isNotEmpty) {
+        //     videoTrackId = videoTracks[0].id;
+        //   }
+        // }
+
+        // // Capture video frames
+        // if (videoTrackId != null) {
+        //   var videoFrame = popVideoFrame(videoTrackId);
+        //   if (videoFrame != null) {}
+        // }
+
+        // Capture audio frames (using the constant audio buffer key)
+        var audioFrame = popAudioFrame();
+        print('Audio frame: ${audioFrame?.buffer.length}');
+      } catch (e) {
+        print('Error capturing frames: $e');
+      }
+    });
+
+    await _remotePeer.initConnection((RTCTrackEvent event) async {
       _addLog('Remote track received: ${event.track.kind}');
-      if (event.track.kind == 'video') {
-        _addLog('Video track ID: ${event.track.id}');
+
+      try {
+        // Create a stream to hold the track if needed
+        if (_remoteStream == null) {
+          // Use stream from event if available, otherwise create new
+          if (event.streams.isNotEmpty) {
+            _remoteStream = event.streams[0];
+            _addLog('Using existing stream from event');
+          } else {
+            _remoteStream = await createLocalMediaStream('remote_stream');
+            _addLog('Created new media stream');
+          }
+
+          // Set stream to renderer to activate audio pipeline
+          //_remoteRenderer.srcObject = _remoteStream;
+
+          // Enable speaker (important for audio)
+          try {
+            await Helper.setSpeakerphoneOn(true);
+            _addLog('Speaker enabled');
+          } catch (e) {
+            _addLog('Error enabling speaker: $e');
+          }
+        }
+
+        // Add the track to our stream if not already there
+        if (!_remoteStream!.getTracks().contains(event.track)) {
+          await _remoteStream!.addTrack(event.track);
+          _addLog('Added track to stream');
+        }
+
+        if (event.track.kind == 'video') {
+          _addLog('Video track ID: ${event.track.id}');
+        } else if (event.track.kind == 'audio') {
+          _addLog('Audio track ID: ${event.track.id}');
+
+          // Try direct audio track handling for clearer playback
+          try {
+            // Force audio track directly to renderer
+            //_remoteRenderer.srcObject = _remoteStream;
+            _addLog('Direct audio track handling applied');
+          } catch (e) {
+            _addLog('Error in audio track handling: $e');
+          }
+        }
+      } catch (e) {
+        _addLog('Error handling remote track: $e');
       }
     });
 
@@ -94,6 +192,11 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
     _addLog('Hanging up...');
     await _localPeer.close();
     await _remotePeer.close();
+
+    // Clear remote stream
+    _remoteStream = null;
+    //_remoteRenderer.srcObject = null;
+
     setState(() {
       _inCall = false;
     });
@@ -106,37 +209,6 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
     _addLog('Starting frame capture');
     setState(() {
       _capturingFrames = true;
-    });
-
-    _frameTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-      try {
-        // Get track IDs from the local peer streams
-        String? videoTrackId;
-        if (_localPeer.stream != null) {
-          var videoTracks = _localPeer.stream!.getVideoTracks();
-          if (videoTracks.isNotEmpty) {
-            videoTrackId = videoTracks[0].id;
-          }
-        }
-
-        // Capture video frames
-        if (videoTrackId != null) {
-          var videoFrame = popVideoFrame(videoTrackId);
-          if (videoFrame != null) {
-            _addLog(
-                'Video frame: ${videoFrame.width}x${videoFrame.height}, ${videoFrame.buffer.length} bytes');
-          }
-        }
-
-        // Capture audio frames (using the constant audio buffer key)
-        var audioFrame = popAudioFrame();
-        if (audioFrame != null) {
-          _addLog(
-              'Audio frame: ${audioFrame.sampleRate}Hz, ${audioFrame.channels} channels, ${audioFrame.buffer.length} bytes');
-        }
-      } catch (e) {
-        _addLog('Error capturing frames: $e');
-      }
     });
   }
 
@@ -157,6 +229,41 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
       ),
       body: Column(
         children: [
+          // Display the video renderer as main content
+          Expanded(
+            flex: 3,
+            child: Container(
+              margin: EdgeInsets.all(8.0),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.black),
+              ),
+              child: Container(),
+            ),
+          ),
+
+          // Volume control slider (visual only - system controls actual volume)
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
+            child: Row(
+              children: [
+                Icon(Icons.volume_down),
+                Expanded(
+                  child: Slider(
+                    value: _volume,
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: (value) {
+                      setState(() => _volume = value);
+                      _updateVolume();
+                    },
+                  ),
+                ),
+                Icon(Icons.volume_up),
+              ],
+            ),
+          ),
+
           // Control buttons
           Padding(
             padding: const EdgeInsets.all(8.0),
@@ -190,6 +297,7 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
 
           // Log display area
           Expanded(
+            flex: 2,
             child: Container(
               margin: EdgeInsets.all(8.0),
               padding: EdgeInsets.all(8.0),
