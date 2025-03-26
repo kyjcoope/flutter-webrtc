@@ -22,6 +22,9 @@ FFI_PLUGIN_EXPORT unsigned long long pushAudioNativeBufferFFI(const char* key, c
 FFI_PLUGIN_EXPORT unsigned long long popNativeBufferFFI(const char* key);
 FFI_PLUGIN_EXPORT void freeNativeBufferFFI(const char* key);
 
+FFI_PLUGIN_EXPORT bool initializeDartApiDL(void* data);
+FFI_PLUGIN_EXPORT bool registerDartPort(const char* channel_name, int64_t port);
+
 #ifdef __cplusplus
 }
 #endif

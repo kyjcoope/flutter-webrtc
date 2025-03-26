@@ -42,21 +42,21 @@ class EncodedVideoFrame extends MediaFrame {
   final int frameType;
 }
 
-class EncodedAudioFrame extends MediaFrame {
-  EncodedAudioFrame({
+class DecodedAudioSample extends MediaFrame {
+  DecodedAudioSample({
     required this.sampleRate,
     required this.channels,
     required super.frameTime,
     required super.buffer,
   });
 
-  factory EncodedAudioFrame.fromPointer(ffi.Pointer<MediaFrameNative> ptr) {
+  factory DecodedAudioSample.fromPointer(ffi.Pointer<MediaFrameNative> ptr) {
     final nativeFrame = ptr.ref;
     Uint8List bufferList =
         nativeFrame.buffer.asTypedList(nativeFrame.bufferSize);
     Uint8List buffer = Uint8List.fromList(bufferList);
 
-    return EncodedAudioFrame(
+    return DecodedAudioSample(
       sampleRate: nativeFrame.metadata.audio.sampleRate,
       channels: nativeFrame.metadata.audio.channels,
       frameTime: nativeFrame.frameTime,
