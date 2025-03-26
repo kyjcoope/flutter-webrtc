@@ -1,6 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+
+import 'audio/audio_decoder_connector.dart';
+import 'video/video_decoder_connector.dart';
 
 class FrameCaptureSample extends StatefulWidget {
   @override
@@ -10,35 +14,65 @@ class FrameCaptureSample extends StatefulWidget {
 class _FrameCaptureSampleState extends State<FrameCaptureSample> {
   final WebRTCLocalPeer _localPeer = WebRTCLocalPeer();
   final WebRTCRemotePeer _remotePeer = WebRTCRemotePeer();
+  final VideoDecoderConnector _videoDecoder = VideoDecoderConnector();
+  final AudioDecoderConnector _audioDecoder = AudioDecoderConnector();
   final List<String> _logs = [];
   final ScrollController _scrollController = ScrollController();
 
   bool _inCall = false;
-  StreamSubscription? _videoSubscription;
-  StreamSubscription? _audioSubscription;
+  StreamSubscription? _textureIdSubscription;
+  StreamSubscription? _audioSampleSubscription;
+  StreamSubscription? _videoErrorSubscription;
+  StreamSubscription? _audioErrorSubscription;
+  int? _textureId;
+  AudioSampleInfo? _lastAudioSample;
 
   @override
   void initState() {
     super.initState();
-    _setupFrameListeners();
+    _setupDecoders();
   }
 
-  void _setupFrameListeners() {
-    _videoSubscription = _remotePeer.onVideoFrame.listen((frame) {
-      _addLog(
-          'Received video frame: ${frame.width}x${frame.height}, size: ${frame.buffer.length} bytes');
+  Future<void> _setupDecoders() async {
+    // Initialize video decoder
+    await _videoDecoder.initialize();
+
+    _textureIdSubscription = _videoDecoder.onTextureId.listen((textureId) {
+      setState(() {
+        _textureId = textureId;
+      });
+      _addLog('Video: Received texture ID: $textureId');
     });
 
-    _audioSubscription = _remotePeer.onAudioFrame.listen((sample) {
+    _videoErrorSubscription = _videoDecoder.onError.listen((error) {
+      _addLog('Video ERROR: $error');
+    });
+
+    // Initialize audio decoder
+    await _audioDecoder.initialize();
+
+    _audioSampleSubscription = _audioDecoder.onAudioSample.listen((sample) {
+      setState(() {
+        _lastAudioSample = sample;
+      });
       _addLog(
-          'Received audio sample: channels=${sample.channels}, size=${sample.buffer.length} bytes');
+          'Audio: Received sample with ${sample.count} samples, first few bytes: ${sample.samples.take(5)}');
+    });
+
+    _audioErrorSubscription = _audioDecoder.onError.listen((error) {
+      _addLog('Audio ERROR: $error');
     });
   }
 
   @override
   void dispose() {
-    _videoSubscription?.cancel();
-    _audioSubscription?.cancel();
+    _textureIdSubscription?.cancel();
+    _audioSampleSubscription?.cancel();
+    _videoErrorSubscription?.cancel();
+    _audioErrorSubscription?.cancel();
+
+    _videoDecoder.dispose();
+    _audioDecoder.dispose();
     _hangUp();
     _scrollController.dispose();
     super.dispose();
@@ -46,7 +80,8 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
 
   void _addLog(String message) {
     setState(() {
-      _logs.add("[${DateTime.now().toString().split('.').first}] $message");
+      final timestamp = DateTime.now().toString().split('.').first;
+      _logs.add('[$timestamp] $message');
       if (_logs.length > 100) {
         _logs.removeAt(0);
       }
@@ -66,8 +101,23 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
   Future<void> _makeCall() async {
     _addLog('Initializing connection...');
 
+    // Set up video processing callback
+    final videoCallback = (String trackId) async {
+      _addLog('Setting up video decoding for track: $trackId');
+      await _videoDecoder.setupVideoProcessing(trackId);
+    };
+
+    // Set up audio processing callback
+    final audioCallback = () async {
+      _addLog('Setting up audio decoding');
+      await _audioDecoder.startAudioProcessing();
+    };
+
     await _localPeer.initialize();
-    await _remotePeer.initialize();
+    await _remotePeer.initialize(
+      onVideoTrack: videoCallback,
+      onAudioTrack: audioCallback,
+    );
 
     _localPeer.connection?.onIceCandidate = (candidate) {
       _remotePeer.connection?.addCandidate(candidate);
@@ -104,6 +154,8 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
 
     setState(() {
       _inCall = false;
+      _textureId = null;
+      _lastAudioSample = null;
     });
     _addLog('Call ended');
   }
@@ -112,15 +164,22 @@ class _FrameCaptureSampleState extends State<FrameCaptureSample> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Frame Capture Demo'),
+        title: Text('Media Decoder Demo'),
       ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Frame Capture Test',
-              style: Theme.of(context).textTheme.titleLarge,
+            child: Column(
+              children: [
+                Text(
+                  'Media Processing Test',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                if (_textureId != null) Text('Video Texture ID: $_textureId'),
+                if (_lastAudioSample != null)
+                  Text('Last Audio Sample: ${_lastAudioSample!.count} samples'),
+              ],
             ),
           ),
           Padding(
