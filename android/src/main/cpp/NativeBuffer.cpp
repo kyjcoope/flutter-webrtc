@@ -1,131 +1,86 @@
 #include "NativeBuffer.h"
-#include <stdlib.h>
-#include <string.h>
+#include <cstring>
+#include <stdexcept>
 
-NativeBuffer* nativeBufferInit(int capacity, int maxBufferSize) {
-    NativeBuffer* rb = (NativeBuffer*)malloc(sizeof(NativeBuffer));
-    if (!rb) return NULL;
-    rb->capacity = capacity;
-    rb->maxBufferSize = maxBufferSize;
-    rb->writeIndex = 0;
-    rb->readIndex = 0;
-    rb->count = 0;
-    rb->frames = (MediaFrame**)malloc(capacity * sizeof(MediaFrame*));
-    if (!rb->frames) {
-        free(rb);
-        return NULL;
+NativeBuffer::NativeBuffer(int capacity, int max_buffer_size) :
+    capacity_(static_cast<size_t>(capacity)),
+    max_frame_buffer_size_(static_cast<size_t>(max_buffer_size)),
+    write_index_(0),
+    read_index_(0),
+    count_(0)
+{
+    if (capacity <= 0 || max_buffer_size <= 0) {
+        throw std::invalid_argument("Capacity and max_buffer_size must be positive.");
     }
-
-    for (int i = 0; i < capacity; i++) {
-       rb->frames[i] = (MediaFrame*)malloc(sizeof(MediaFrame));
-       if (!rb->frames[i]) {
-          for (int j = 0; j < i; j++) free(rb->frames[j]);
-          free(rb->frames);
-          free(rb);
-          return NULL;
-       }
-       rb->frames[i]->mediaType = MEDIA_TYPE_VIDEO;
-       rb->frames[i]->frameTime = 0;
-       rb->frames[i]->metadata.video.width = 0;
-       rb->frames[i]->metadata.video.height = 0;
-       rb->frames[i]->metadata.video.rotation = 0;
-       rb->frames[i]->metadata.video.frameType = 0;
-       rb->frames[i]->bufferSize = 0;
-       rb->frames[i]->buffer = (uint8_t*)malloc(maxBufferSize);
-       if (!rb->frames[i]->buffer) {
-          for (int j = 0; j <= i; j++) {
-              if (rb->frames[j]) free(rb->frames[j]);
-          }
-          free(rb->frames);
-          free(rb);
-          return NULL;
-       }
+    frames_.reserve(capacity_);
+    for (size_t i = 0; i < capacity_; ++i) {
+        frames_.emplace_back(std::make_unique<MediaFrame>(max_frame_buffer_size_));
+        if (!frames_.back() || !frames_.back()->hasBuffer()) {
+             throw std::runtime_error("Failed to allocate MediaFrame buffer.");
+        }
     }
-    pthread_mutex_init(&rb->mutex, NULL);
-    pthread_cond_init(&rb->notEmpty, NULL);
-    pthread_cond_init(&rb->notFull, NULL);
-    return rb;
 }
 
-int nativeBufferPush(NativeBuffer* rb, const uint8_t* data, int dataSize,
-                    int width, int height, uint64_t frameTime, int rotation, int frameType) {
-    pthread_mutex_lock(&rb->mutex);
-    while (rb->count == rb->capacity) {
-       pthread_cond_wait(&rb->notFull, &rb->mutex);
+int NativeBuffer::pushVideoFrame(const uint8_t* data, size_t data_size,
+                                 int width, int height, uint64_t frame_time, int rotation, int frame_type) {
+    if (data_size > max_frame_buffer_size_) {
+        return -1;
     }
-    if (dataSize > rb->maxBufferSize) {
-      pthread_mutex_unlock(&rb->mutex);
-      return -1;
-    }
-
-    MediaFrame* frame = rb->frames[rb->writeIndex];
-    memcpy(frame->buffer, data, dataSize);
-    frame->bufferSize = dataSize;
-    frame->mediaType = MEDIA_TYPE_VIDEO;
-    frame->frameTime = frameTime;
-    frame->metadata.video.width = width;
-    frame->metadata.video.height = height;
-    frame->metadata.video.rotation = rotation;
-    frame->metadata.video.frameType = frameType;
-    
-    rb->writeIndex = (rb->writeIndex + 1) % rb->capacity;
-    rb->count++;
-    pthread_cond_signal(&rb->notEmpty);
-    pthread_mutex_unlock(&rb->mutex);
+    std::unique_lock<std::mutex> lock(mutex_);
+    not_full_cv_.wait(lock, [this] { return count_.load() < capacity_; });
+    MediaFrame* frame_to_write = frames_[write_index_].get();
+    std::memcpy(frame_to_write->buffer.get(), data, data_size);
+    frame_to_write->bufferSize = data_size;
+    frame_to_write->mediaType = MEDIA_TYPE_VIDEO;
+    frame_to_write->frameTime = frame_time;
+    frame_to_write->metadata.video.width = width;
+    frame_to_write->metadata.video.height = height;
+    frame_to_write->metadata.video.rotation = rotation;
+    frame_to_write->metadata.video.frameType = frame_type;
+    write_index_ = (write_index_ + 1) % capacity_;
+    count_++;
+    lock.unlock();
+    not_empty_cv_.notify_one();
     return 0;
 }
 
-int nativeBufferPushAudio(NativeBuffer* rb, const uint8_t* data, int dataSize,
-                         int sampleRate, int channels, uint64_t frameTime) {
-    pthread_mutex_lock(&rb->mutex);
-    while (rb->count == rb->capacity) {
-       pthread_cond_wait(&rb->notFull, &rb->mutex);
+int NativeBuffer::pushAudioFrame(const uint8_t* data, size_t data_size,
+                                 int sample_rate, int channels, uint64_t frame_time) {
+    if (data_size > max_frame_buffer_size_) {
+        return -1;
     }
-    if (dataSize > rb->maxBufferSize) {
-      pthread_mutex_unlock(&rb->mutex);
-      return -1;
-    }
-
-    MediaFrame* frame = rb->frames[rb->writeIndex];
-    memcpy(frame->buffer, data, dataSize);
-    frame->bufferSize = dataSize;
-    frame->mediaType = MEDIA_TYPE_AUDIO;
-    frame->frameTime = frameTime;
-    frame->metadata.audio.sampleRate = sampleRate;
-    frame->metadata.audio.channels = channels;
-    
-    rb->writeIndex = (rb->writeIndex + 1) % rb->capacity;
-    rb->count++;
-    pthread_cond_signal(&rb->notEmpty);
-    pthread_mutex_unlock(&rb->mutex);
+    std::unique_lock<std::mutex> lock(mutex_);
+    not_full_cv_.wait(lock, [this] { return count_.load() < capacity_; });
+    MediaFrame* frame_to_write = frames_[write_index_].get();
+    std::memcpy(frame_to_write->buffer.get(), data, data_size);
+    frame_to_write->bufferSize = data_size;
+    frame_to_write->mediaType = MEDIA_TYPE_AUDIO;
+    frame_to_write->frameTime = frame_time;
+    frame_to_write->metadata.audio.sampleRate = sample_rate;
+    frame_to_write->metadata.audio.channels = channels;
+    write_index_ = (write_index_ + 1) % capacity_;
+    count_++;
+    lock.unlock();
+    not_empty_cv_.notify_one();
     return 0;
 }
 
-MediaFrame* nativeBufferPop(NativeBuffer* rb) {
-    if (!rb) return NULL;
-    pthread_mutex_lock(&rb->mutex);
-    while (rb->count == 0) {
-       pthread_cond_wait(&rb->notEmpty, &rb->mutex);
-    }
-    MediaFrame* frame = rb->frames[rb->readIndex];
-    rb->readIndex = (rb->readIndex + 1) % rb->capacity;
-    rb->count--;
-    pthread_cond_signal(&rb->notFull);
-    pthread_mutex_unlock(&rb->mutex);
-    return frame;
+MediaFrame* NativeBuffer::popFrame() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    not_empty_cv_.wait(lock, [this] { return count_.load() > 0; });
+    MediaFrame* frame_to_read = frames_[read_index_].get();
+    read_index_ = (read_index_ + 1) % capacity_;
+    count_--;
+    lock.unlock();
+    not_full_cv_.notify_one();
+    return frame_to_read;
 }
 
-void nativeBufferFree(NativeBuffer* rb) {
-    if (!rb) return;
-    for (int i = 0; i < rb->capacity; i++) {
-      if (rb->frames[i]) {
-          if (rb->frames[i]->buffer) free(rb->frames[i]->buffer);
-          free(rb->frames[i]);
-      }
-    }
-    free(rb->frames);
-    pthread_mutex_destroy(&rb->mutex);
-    pthread_cond_destroy(&rb->notEmpty);
-    pthread_cond_destroy(&rb->notFull);
-    free(rb);
+MediaFrame* NativeBuffer::getLastPushedFrame() {
+     std::lock_guard<std::mutex> lock(mutex_);
+     if (count_.load() == 0) {
+         return nullptr;
+     }
+     size_t last_write_index = (write_index_ == 0) ? (capacity_ - 1) : (write_index_ - 1);
+     return frames_[last_write_index].get();
 }

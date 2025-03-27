@@ -1,9 +1,12 @@
 #ifndef NATIVE_BUFFER_H
 #define NATIVE_BUFFER_H
 
-#include <stddef.h>
-#include <stdint.h>
-#include <pthread.h>
+#include <vector>
+#include <memory>
+#include <mutex>
+#include <condition_variable>
+#include <cstdint>
+#include <atomic>
 
 typedef enum {
   MEDIA_TYPE_VIDEO = 0,
@@ -24,35 +27,58 @@ typedef union {
   } audio;
 } MediaMetadata;
 
-typedef struct {
-  MediaType mediaType;
-  uint64_t frameTime;
-  uint8_t* buffer;
-  int bufferSize;
-  
-  MediaMetadata metadata;
-} MediaFrame;
+class MediaFrame {
+public:
+    MediaType mediaType;
+    uint64_t frameTime;
+    std::unique_ptr<uint8_t[]> buffer; 
+    size_t bufferSize;
+    size_t bufferCapacity;
+    MediaMetadata metadata;
 
-typedef struct {
-  MediaFrame** frames;
-  int capacity;
-  int maxBufferSize;
-  int writeIndex;
-  int readIndex;
-  int count;
-  pthread_mutex_t mutex;
-  pthread_cond_t notEmpty;
-  pthread_cond_t notFull;
-} NativeBuffer;
+    explicit MediaFrame(size_t max_buffer_size) :
+        mediaType(MEDIA_TYPE_VIDEO),
+        frameTime(0),
+        buffer(std::make_unique<uint8_t[]>(max_buffer_size)),
+        bufferSize(0),
+        bufferCapacity(max_buffer_size),
+        metadata{}
+    {}
 
-NativeBuffer* nativeBufferInit(int capacity, int maxBufferSize);
-int nativeBufferPush(NativeBuffer* rb, const uint8_t* data, int dataSize,
-  int width, int height, uint64_t frameTime, int rotation, int frameType);
+    MediaFrame(const MediaFrame&) = delete;
+    MediaFrame& operator=(const MediaFrame&) = delete;
+    MediaFrame(MediaFrame&&) = default;
+    MediaFrame& operator=(MediaFrame&&) = default;
 
-int nativeBufferPushAudio(NativeBuffer* rb, const uint8_t* data, int dataSize,
-  int sampleRate, int channels, uint64_t frameTime);
+    bool hasBuffer() const { return buffer != nullptr; }
+};
 
-MediaFrame* nativeBufferPop(NativeBuffer* rb);
-void nativeBufferFree(NativeBuffer* rb);
+class NativeBuffer {
+public:
+    NativeBuffer(int capacity, int max_buffer_size);
+    ~NativeBuffer() = default;
+
+    NativeBuffer(const NativeBuffer&) = delete;
+    NativeBuffer& operator=(const NativeBuffer&) = delete;
+    int pushVideoFrame(const uint8_t* data, size_t data_size,
+                       int width, int height, uint64_t frame_time, int rotation, int frame_type);
+    int pushAudioFrame(const uint8_t* data, size_t data_size,
+                       int sample_rate, int channels, uint64_t frame_time);
+    MediaFrame* popFrame();
+    MediaFrame* getLastPushedFrame();
+
+private:
+    std::vector<std::unique_ptr<MediaFrame>> frames_;
+    const size_t capacity_;
+    const size_t max_frame_buffer_size_;
+
+    size_t write_index_;
+    size_t read_index_;
+    std::atomic<size_t> count_;
+
+    std::mutex mutex_;
+    std::condition_variable not_empty_cv_;
+    std::condition_variable not_full_cv_;
+};
 
 #endif // NATIVE_BUFFER_H

@@ -23,7 +23,7 @@ Java_org_webrtc_video_VideoDecoderBypass_pushFrame(JNIEnv *env, jclass clazz, js
     if (!key) return 0;
     uint8_t* buf = reinterpret_cast<uint8_t*>(env->GetDirectBufferAddress(buffer));
     jlong size = env->GetDirectBufferCapacity(buffer);
-    unsigned long long result = pushNativeBufferFFI(key, buf, static_cast<int>(size),
+    uintptr_t result = pushVideoNativeBufferFFI(key, buf, static_cast<size_t>(size),
                                                   width, height, static_cast<uint64_t>(frameTime),
                                                   rotation, frameType);
     env->ReleaseStringUTFChars(jTrackId, key);
