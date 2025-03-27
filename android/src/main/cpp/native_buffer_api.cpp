@@ -4,7 +4,6 @@
 #include <string>
 #include <unordered_map>
 #include <mutex>
-#include <cstdint>
 #include <memory>
 #include <atomic>
 
@@ -17,19 +16,38 @@ static std::mutex g_portsMutex;
 static std::atomic<bool> g_dartApiInitialized{false};
 
 static void notifyDartFrameReady(const std::string& key) {
-    if (!g_dartApiInitialized.load()) return;
-    std::lock_guard<std::mutex> lock(g_portsMutex);
-    auto port_it = g_dartPorts.find(key);
-    if (port_it != g_dartPorts.end() && port_it->second > 0) {
+    if (!g_dartApiInitialized.load(std::memory_order_acquire)) {
+        return;
+    }
+    int64_t port_id = 0;
+    {
+        std::lock_guard<std::mutex> lock(g_portsMutex);
+        auto port_it = g_dartPorts.find(key);
+        if (port_it != g_dartPorts.end()) {
+            port_id = port_it->second;
+        }
+    }
+    if (port_id > 0) {
         Dart_CObject message;
         message.type = Dart_CObject_kInt64;
         message.value.as_int64 = 1;
-        Dart_PostCObject_DL(port_it->second, &message);
+        Dart_PostCObject_DL(port_id, &message);
+    }
+}
+
+static int handlePushResult(int internal_push_result, const std::string& key) {
+    if (internal_push_result == 0) {
+        notifyDartFrameReady(key);
+        return 1;
+    } else {
+        return 0;
     }
 }
 
 FFI_PLUGIN_EXPORT int initNativeBufferFFI(const char* key, int capacity, int maxBufferSize) {
-    if (!key || capacity <= 0 || maxBufferSize <= 0) return 0;
+    if (!key || capacity <= 0 || maxBufferSize <= 0) {
+         return 0;
+    }
     std::string skey(key);
     std::lock_guard<std::mutex> lock(g_nativeBuffersMutex);
     if (g_nativeBuffers.find(skey) == g_nativeBuffers.end()) {
@@ -42,19 +60,11 @@ FFI_PLUGIN_EXPORT int initNativeBufferFFI(const char* key, int capacity, int max
     return 1;
 }
 
-static uintptr_t handlePushResult(int push_result, NativeBuffer* buffer_ptr, const std::string& key) {
-    if (push_result == 0) {
-        notifyDartFrameReady(key);
-        MediaFrame* frame_ptr = buffer_ptr->getLastPushedFrame();
-        return reinterpret_cast<uintptr_t>(frame_ptr);
-    } else {
-        return 0;
-    }
-}
-
-FFI_PLUGIN_EXPORT uintptr_t pushVideoNativeBufferFFI(const char* key, const uint8_t* buffer, size_t dataSize,
+FFI_PLUGIN_EXPORT int pushVideoNativeBufferFFI(const char* key, const uint8_t* buffer, size_t dataSize,
   int width, int height, uint64_t frameTime, int rotation, int frameType) {
-    if (!key || !buffer || dataSize == 0) return 0;
+    if (!key || !buffer || dataSize == 0) {
+         return 0;
+    }
     std::string skey(key);
     NativeBuffer* buffer_ptr = nullptr;
     {
@@ -64,14 +74,16 @@ FFI_PLUGIN_EXPORT uintptr_t pushVideoNativeBufferFFI(const char* key, const uint
             return 0;
         }
         buffer_ptr = it->second.get();
-    } 
+    }
     int result = buffer_ptr->pushVideoFrame(buffer, dataSize, width, height, frameTime, rotation, frameType);
-    return handlePushResult(result, buffer_ptr, skey);
+    return handlePushResult(result, skey);
 }
 
-FFI_PLUGIN_EXPORT uintptr_t pushAudioNativeBufferFFI(const char* key, const uint8_t* buffer, size_t dataSize,
+FFI_PLUGIN_EXPORT int pushAudioNativeBufferFFI(const char* key, const uint8_t* buffer, size_t dataSize,
   int sampleRate, int channels, uint64_t frameTime) {
-     if (!key || !buffer || dataSize == 0) return 0;
+     if (!key || !buffer || dataSize == 0) {
+        return 0;
+     }
     std::string skey(key);
     NativeBuffer* buffer_ptr = nullptr;
     {
@@ -83,12 +95,14 @@ FFI_PLUGIN_EXPORT uintptr_t pushAudioNativeBufferFFI(const char* key, const uint
         buffer_ptr = it->second.get();
     }
     int result = buffer_ptr->pushAudioFrame(buffer, dataSize, sampleRate, channels, frameTime);
-    return handlePushResult(result, buffer_ptr, skey);
+    return handlePushResult(result, skey);
 }
 
 
 FFI_PLUGIN_EXPORT uintptr_t popNativeBufferFFI(const char* key) {
-    if (!key) return 0;
+    if (!key) {
+        return 0;
+    }
     std::string skey(key);
     NativeBuffer* buffer_ptr = nullptr;
     {
@@ -104,23 +118,31 @@ FFI_PLUGIN_EXPORT uintptr_t popNativeBufferFFI(const char* key) {
 }
 
 FFI_PLUGIN_EXPORT void freeNativeBufferFFI(const char* key) {
-    if (!key) return;
+    if (!key) {
+        return;
+    }
     std::string skey(key);
-    std::lock_guard<std::mutex> lock(g_nativeBuffersMutex);
-    g_nativeBuffers.erase(skey);
-
-    std::lock_guard<std::mutex> port_lock(g_portsMutex);
-    g_dartPorts.erase(skey);
+    {
+        std::lock_guard<std::mutex> lock(g_nativeBuffersMutex);
+        size_t erased_count = g_nativeBuffers.erase(skey);
+    }
+    {
+        std::lock_guard<std::mutex> port_lock(g_portsMutex);
+        g_dartPorts.erase(skey);
+    }
 }
 
 FFI_PLUGIN_EXPORT bool initializeDartApiDL(void* data) {
-    if (g_dartApiInitialized.load()) {
+    if (g_dartApiInitialized.load(std::memory_order_relaxed)) {
         return true;
     }
-    if (data == nullptr || Dart_InitializeApiDL(data) != 0) {
+    if (data == nullptr) {
         return false;
     }
-    g_dartApiInitialized.store(true);
+    if (Dart_InitializeApiDL(data) != 0) {
+        return false;
+    }
+    g_dartApiInitialized.store(true, std::memory_order_release);
     return true;
 }
 
@@ -129,7 +151,9 @@ FFI_PLUGIN_EXPORT bool registerDartPort(const char* channel_name, int64_t port) 
         return false;
     }
     std::string channel(channel_name);
-    std::lock_guard<std::mutex> lock(g_portsMutex);
-    g_dartPorts[channel] = port;
+    {
+        std::lock_guard<std::mutex> lock(g_portsMutex);
+        g_dartPorts[channel] = port;
+    }
     return true;
 }

@@ -22,10 +22,9 @@ class AudioDecoderService {
 
       _audioSubscription = audioStream.listen(
         (sample) {
-          print(
-              'Isolate: Audio sample received: channels=${sample.channels}, ' +
-                  'sampleRate=${sample.sampleRate}, ' +
-                  'size=${sample.buffer.length} bytes');
+          print('Isolate: Audio sample received: channels=${sample.channels}, '
+              'sampleRate=${sample.sampleRate}, '
+              'size=${sample.buffer.length} bytes');
 
           //final sampleData = sample.buffer;
           // _mainSendPort.send(AudioSampleMessage(

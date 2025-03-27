@@ -6,7 +6,6 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstdint>
-#include <atomic>
 
 typedef enum {
   MEDIA_TYPE_VIDEO = 0,
@@ -31,7 +30,7 @@ class MediaFrame {
 public:
     MediaType mediaType;
     uint64_t frameTime;
-    std::unique_ptr<uint8_t[]> buffer; 
+    std::unique_ptr<uint8_t[]> buffer;
     size_t bufferSize;
     size_t bufferCapacity;
     MediaMetadata metadata;
@@ -74,7 +73,7 @@ private:
 
     size_t write_index_;
     size_t read_index_;
-    std::atomic<size_t> count_;
+    size_t count_;
 
     std::mutex mutex_;
     std::condition_variable not_empty_cv_;

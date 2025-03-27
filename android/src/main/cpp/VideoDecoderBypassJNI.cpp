@@ -13,21 +13,32 @@ Java_org_webrtc_video_VideoDecoderBypass_initNativeBuffer(JNIEnv *env, jclass cl
     }
     int result = initNativeBufferFFI(key, capacity, bufferSize);
     env->ReleaseStringUTFChars(jTrackId, key);
-    return result;
+    return static_cast<jint>(result);
 }
 
 JNIEXPORT jlong JNICALL
 Java_org_webrtc_video_VideoDecoderBypass_pushFrame(JNIEnv *env, jclass clazz, jstring jTrackId, jobject buffer,
                                                       jint width, jint height, jlong frameTime, jint rotation, jint frameType) {
     const char* key = env->GetStringUTFChars(jTrackId, NULL);
-    if (!key) return 0;
+    if (!key) {
+        return 0LL;
+    }
     uint8_t* buf = reinterpret_cast<uint8_t*>(env->GetDirectBufferAddress(buffer));
-    jlong size = env->GetDirectBufferCapacity(buffer);
-    uintptr_t result = pushVideoNativeBufferFFI(key, buf, static_cast<size_t>(size),
-                                                  width, height, static_cast<uint64_t>(frameTime),
-                                                  rotation, frameType);
+    if (!buf) {
+         env->ReleaseStringUTFChars(jTrackId, key);
+         return 0LL;
+    }
+    jlong capacity = env->GetDirectBufferCapacity(buffer);
+    if (capacity <= 0) {
+        env->ReleaseStringUTFChars(jTrackId, key);
+        return 0LL;
+    }
+    size_t dataSize = static_cast<size_t>(capacity);
+    int ffi_result = pushVideoNativeBufferFFI(key, buf, dataSize,
+                                             width, height, static_cast<uint64_t>(frameTime),
+                                             rotation, frameType);
     env->ReleaseStringUTFChars(jTrackId, key);
-    return static_cast<jlong>(result);
+    return static_cast<jlong>(ffi_result);
 }
 
 JNIEXPORT void JNICALL

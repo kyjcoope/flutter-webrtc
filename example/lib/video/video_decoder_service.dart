@@ -22,7 +22,7 @@ class VideoDecoderService {
       _subscriptions[trackId] = videoStream.listen(
         (frame) {
           print(
-              'Isolate: Frame received: ${frame.width}x${frame.height}, size: ${frame.buffer.length} bytes');
+              'Isolate: Frame received: ${frame.width}x${frame.height}, size: ${frame.buffer.length} bytes, rotation: ${frame.rotation}, frameType: ${frame.frameType}');
 
           if (frame.width > 0 && !_sentTexture) {
             _sentTexture = true;

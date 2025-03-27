@@ -29,7 +29,7 @@ enum MediaType {
   factory MediaType.fromValue(int value) {
     return MediaType.values.firstWhere(
       (type) => type.value == value,
-      orElse: () => MediaType.video,
+      orElse: () => throw ArgumentError('Invalid MediaType value: $value'),
     );
   }
 
@@ -72,8 +72,11 @@ base class MediaFrameNative extends ffi.Struct {
 
   external ffi.Pointer<ffi.Uint8> buffer;
 
-  @ffi.Int32()
+  @ffi.Uint64()
   external int bufferSize;
+
+  @ffi.Uint64()
+  external int bufferCapacity;
 
   external MediaMetadata metadata;
 }
@@ -100,7 +103,9 @@ final NativeBufferPopDart _nativeBufferPop = _nativeLib
 
 class WebRTCMediaStreamer {
   factory WebRTCMediaStreamer() => _instance;
-  WebRTCMediaStreamer._internal();
+  WebRTCMediaStreamer._internal() {
+    _ensureDartApiInitialized();
+  }
   static final WebRTCMediaStreamer _instance = WebRTCMediaStreamer._internal();
 
   final Map<String, StreamController<EncodedVideoFrame>>
@@ -108,10 +113,13 @@ class WebRTCMediaStreamer {
   final StreamController<DecodedAudioSample> _audioStreamController =
       StreamController<DecodedAudioSample>.broadcast();
   final Map<String, ReceivePort> _receivePorts = {};
+  static final Completer<bool> _dartApiInitializationCompleter =
+      Completer<bool>();
   static bool _dartApiInitialized = false;
   bool _audioStreamInitialized = false;
 
   Future<Stream<EncodedVideoFrame>> videoFramesFrom(String trackId) async {
+    await _dartApiInitializationCompleter.future;
     if (_videoStreamControllers.containsKey(trackId)) {
       return _videoStreamControllers[trackId]!.stream;
     }
@@ -122,6 +130,7 @@ class WebRTCMediaStreamer {
   }
 
   Future<Stream<DecodedAudioSample>> audioFrames() async {
+    await _dartApiInitializationCompleter.future;
     if (!_audioStreamInitialized) {
       await _initializeAudioStream();
     }
@@ -130,25 +139,22 @@ class WebRTCMediaStreamer {
 
   StreamController<EncodedVideoFrame> _createVideoStreamController(
       String trackId) {
-    final controller = StreamController<EncodedVideoFrame>.broadcast(
-      onCancel: () => _checkControllerForCleanup(trackId),
+    late StreamController<EncodedVideoFrame> controller;
+    controller = StreamController<EncodedVideoFrame>.broadcast(
+      onListen: () {},
+      onCancel: () {
+        if (!controller.hasListener) {
+          _cleanupTrackResources(trackId);
+        }
+      },
     );
 
     _videoStreamControllers[trackId] = controller;
     return controller;
   }
 
-  void _checkControllerForCleanup(String trackId) {
-    final controller = _videoStreamControllers[trackId];
-    if (controller != null && !controller.hasListener) {
-      _cleanupTrackResources(trackId);
-    }
-  }
-
   Future<void> _setupFrameNotifications(
-      String trackId, StreamController<EncodedVideoFrame> controller) async {
-    await _ensureDartApiInitialized();
-
+      String trackId, StreamController controller) async {
     final receivePort = ReceivePort();
     final trackIdPtr = trackId.toNativeUtf8();
 
@@ -156,23 +162,31 @@ class WebRTCMediaStreamer {
       final registered =
           _registerPort(trackIdPtr, receivePort.sendPort.nativePort);
       if (!registered) {
+        receivePort.close();
         throw StateError("Failed to register native port for track: $trackId");
       }
 
       _receivePorts[trackId] = receivePort;
-      receivePort.listen((_) {
-        final frame = _fetchVideoFrame(trackId);
-        if (frame != null && !controller.isClosed) {
-          controller.add(frame);
+      receivePort.listen((message) {
+        final currentController = _videoStreamControllers[trackId];
+        if (currentController != null && currentController.hasListener) {
+          final frame = _fetchVideoFrame(trackId);
+          if (frame != null && !currentController.isClosed) {
+            currentController.add(frame);
+          }
         }
       });
+    } catch (e) {
+      receivePort.close();
+      calloc.free(trackIdPtr);
+      rethrow;
     } finally {
       calloc.free(trackIdPtr);
     }
   }
 
   Future<void> _initializeAudioStream() async {
-    await _ensureDartApiInitialized();
+    if (_audioStreamInitialized) return;
 
     final receivePort = ReceivePort();
     final audioKeyPtr = audioKey.toNativeUtf8();
@@ -181,58 +195,94 @@ class WebRTCMediaStreamer {
       final registered =
           _registerPort(audioKeyPtr, receivePort.sendPort.nativePort);
       if (!registered) {
+        receivePort.close();
         throw StateError("Failed to register native port for audio");
       }
 
       _receivePorts[audioKey] = receivePort;
-      receivePort.listen((_) {
-        final frame = _fetchAudioSample();
-        if (frame != null && !_audioStreamController.isClosed) {
-          _audioStreamController.add(frame);
+      receivePort.listen((message) {
+        if (_audioStreamController.hasListener) {
+          final frame = _fetchAudioSample();
+          if (frame != null && !_audioStreamController.isClosed) {
+            _audioStreamController.add(frame);
+          }
         }
       });
 
       _audioStreamInitialized = true;
+    } catch (e) {
+      receivePort.close();
+      calloc.free(audioKeyPtr);
+      rethrow;
     } finally {
       calloc.free(audioKeyPtr);
     }
   }
 
   Future<void> _ensureDartApiInitialized() async {
-    if (_dartApiInitialized) return;
+    if (_dartApiInitialized) await _dartApiInitializationCompleter.future;
 
-    final success = _initializeApi(ffi.NativeApi.initializeApiDLData);
-    if (!success) {
-      throw StateError("Failed to initialize Dart native API");
+    if (!_dartApiInitializationCompleter.isCompleted) {
+      try {
+        final success = _initializeApi(ffi.NativeApi.initializeApiDLData);
+        if (!success) {
+          _dartApiInitializationCompleter.completeError(
+              StateError("Failed to initialize Dart native API"));
+        } else {
+          _dartApiInitialized = true;
+          _dartApiInitializationCompleter.complete(true);
+        }
+      } catch (e) {
+        _dartApiInitializationCompleter.completeError(e);
+      }
     }
-
-    _dartApiInitialized = true;
+    await _dartApiInitializationCompleter.future;
   }
 
   EncodedVideoFrame? _fetchVideoFrame(String trackId) {
     final keyPtr = trackId.toNativeUtf8();
-    final framePtr = _nativeBufferPop(keyPtr);
-    calloc.free(keyPtr);
+    ffi.Pointer<MediaFrameNative> framePtr = ffi.nullptr;
+    try {
+      framePtr = _nativeBufferPop(keyPtr);
+      if (framePtr == ffi.nullptr || framePtr.address == 0) {
+        return null;
+      }
 
-    if (framePtr.address == 0) return null;
+      final nativeFrame = framePtr.ref;
+      final mediaType = MediaType.fromValue(nativeFrame.mediaType);
 
-    final mediaType = MediaType.fromValue(framePtr.ref.mediaType);
-    if (mediaType != MediaType.video) return null;
-
-    return EncodedVideoFrame.fromPointer(framePtr);
+      if (mediaType != MediaType.video) {
+        return null;
+      }
+      return EncodedVideoFrame.fromPointer(framePtr);
+    } catch (e) {
+      return null;
+    } finally {
+      calloc.free(keyPtr);
+    }
   }
 
   DecodedAudioSample? _fetchAudioSample() {
     final keyPtr = audioKey.toNativeUtf8();
-    final framePtr = _nativeBufferPop(keyPtr);
-    calloc.free(keyPtr);
+    ffi.Pointer<MediaFrameNative> framePtr = ffi.nullptr;
+    try {
+      framePtr = _nativeBufferPop(keyPtr);
+      if (framePtr == ffi.nullptr || framePtr.address == 0) {
+        return null;
+      }
 
-    if (framePtr.address == 0) return null;
+      final nativeFrame = framePtr.ref;
+      final mediaType = MediaType.fromValue(nativeFrame.mediaType);
 
-    final mediaType = MediaType.fromValue(framePtr.ref.mediaType);
-    if (mediaType != MediaType.audio) return null;
-
-    return DecodedAudioSample.fromPointer(framePtr);
+      if (mediaType != MediaType.audio) {
+        return null;
+      }
+      return DecodedAudioSample.fromPointer(framePtr);
+    } catch (e) {
+      return null;
+    } finally {
+      calloc.free(keyPtr);
+    }
   }
 
   void _cleanupTrackResources(String trackId) {
@@ -244,17 +294,13 @@ class WebRTCMediaStreamer {
   }
 
   void dispose() {
-    for (final controller in _videoStreamControllers.values) {
-      controller.close();
+    for (final trackId in _videoStreamControllers.keys.toList()) {
+      _cleanupTrackResources(trackId);
     }
     _videoStreamControllers.clear();
-
-    for (final port in _receivePorts.values) {
-      port.close();
-    }
-    _receivePorts.clear();
-
     _audioStreamController.close();
     _audioStreamInitialized = false;
+    _receivePorts[audioKey]?.close();
+    _receivePorts.remove(audioKey);
   }
 }

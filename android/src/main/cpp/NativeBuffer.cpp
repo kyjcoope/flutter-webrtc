@@ -27,7 +27,7 @@ int NativeBuffer::pushVideoFrame(const uint8_t* data, size_t data_size,
         return -1;
     }
     std::unique_lock<std::mutex> lock(mutex_);
-    not_full_cv_.wait(lock, [this] { return count_.load() < capacity_; });
+    not_full_cv_.wait(lock, [this] { return count_ < capacity_; });
     MediaFrame* frame_to_write = frames_[write_index_].get();
     std::memcpy(frame_to_write->buffer.get(), data, data_size);
     frame_to_write->bufferSize = data_size;
@@ -50,7 +50,7 @@ int NativeBuffer::pushAudioFrame(const uint8_t* data, size_t data_size,
         return -1;
     }
     std::unique_lock<std::mutex> lock(mutex_);
-    not_full_cv_.wait(lock, [this] { return count_.load() < capacity_; });
+    not_full_cv_.wait(lock, [this] { return count_ < capacity_; });
     MediaFrame* frame_to_write = frames_[write_index_].get();
     std::memcpy(frame_to_write->buffer.get(), data, data_size);
     frame_to_write->bufferSize = data_size;
@@ -67,7 +67,7 @@ int NativeBuffer::pushAudioFrame(const uint8_t* data, size_t data_size,
 
 MediaFrame* NativeBuffer::popFrame() {
     std::unique_lock<std::mutex> lock(mutex_);
-    not_empty_cv_.wait(lock, [this] { return count_.load() > 0; });
+    not_empty_cv_.wait(lock, [this] { return count_ > 0; });
     MediaFrame* frame_to_read = frames_[read_index_].get();
     read_index_ = (read_index_ + 1) % capacity_;
     count_--;
@@ -78,7 +78,7 @@ MediaFrame* NativeBuffer::popFrame() {
 
 MediaFrame* NativeBuffer::getLastPushedFrame() {
      std::lock_guard<std::mutex> lock(mutex_);
-     if (count_.load() == 0) {
+     if (count_ == 0) {
          return nullptr;
      }
      size_t last_write_index = (write_index_ == 0) ? (capacity_ - 1) : (write_index_ - 1);
