@@ -5,7 +5,13 @@ project(native_lib C CXX)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_C_STANDARD_REQUIRED true)
 
-set(DART_SDK_PATH "C:/Users/kyl3c/OneDrive/Documents/GitHub/flutter/bin/cache/dart-sdk")
+if(NOT DEFINED DART_SDK_PATH)
+    message(FATAL_ERROR "DART_SDK_PATH is not defined.")
+endif()
+
+if(NOT IS_DIRECTORY "${DART_SDK_PATH}/include")
+    message(FATAL_ERROR "DART_SDK_PATH ('${DART_SDK_PATH}') does not appear to be a valid Dart SDK directory.")
+endif()
 
 add_library(native_lib SHARED
     ${CMAKE_SOURCE_DIR}/src/main/cpp/NativeBuffer.cpp

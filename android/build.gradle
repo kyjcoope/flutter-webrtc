@@ -14,6 +14,53 @@ buildscript {
     }
 }
 
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+def findFlutterRoot() {
+    def localPropsFile = rootProject.file('local.properties')
+    if (localPropsFile.exists()) {
+        def localProps = new Properties()
+        localPropsFile.withReader('UTF-8') { reader ->
+            localProps.load(reader)
+        }
+        def flutterSdkPath = localProps.getProperty('flutter.sdk')
+        if (flutterSdkPath != null) {
+            return flutterSdkPath
+        }
+    }
+
+    def flutterSdkPath = System.env.FLUTTER_ROOT
+    if (flutterSdkPath != null) {
+        return flutterSdkPath
+    }
+
+    File potentialFlutterRoot = null
+    if (rootProject.parent != null) {
+        potentialFlutterRoot = new File(rootProject.projectDir.parentFile.parentFile, 'flutter')
+    } else {
+         potentialFlutterRoot = new File(rootProject.projectDir.parentFile, '../flutter')
+    }
+
+    def isWindows = System.properties['os.name'].toLowerCase().contains('windows')
+    def flutterExecutableName = isWindows ? 'flutter.bat' : 'flutter'
+    def flutterExecutable = new File(potentialFlutterRoot, "bin/${flutterExecutableName}")
+
+    if (flutterExecutable.exists()) {
+        return potentialFlutterRoot.canonicalPath
+    }
+
+    throw new GradleException("Flutter SDK not found.")
+}
+
+def flutterRoot = findFlutterRoot()
+def dartSdkPath = "$flutterRoot/bin/cache/dart-sdk"
+if (!new File(dartSdkPath).isDirectory()) {
+     throw new GradleException("Dart SDK not found at expected path: $dartSdkPath.")
+}
+println "BUILD: Using Flutter SDK from: $flutterRoot"
+println "BUILD: Using Dart SDK path: $dartSdkPath"
+
 rootProject.allprojects {
     repositories {
         google()
@@ -21,9 +68,6 @@ rootProject.allprojects {
         maven { url 'https://jitpack.io' }
     }
 }
-
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
 
 android {
     if (project.android.hasProperty("namespace")) {
@@ -36,8 +80,11 @@ android {
         minSdkVersion 21
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         consumerProguardFiles 'proguard-rules.pro'
-        ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+        externalNativeBuild {
+            cmake {
+                arguments "-DDART_SDK_PATH=$dartSdkPath"
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            }
         }
     }
 
