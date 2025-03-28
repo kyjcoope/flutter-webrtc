@@ -18,7 +18,8 @@ Java_org_webrtc_video_VideoDecoderBypass_initNativeBuffer(JNIEnv *env, jclass cl
 
 JNIEXPORT jlong JNICALL
 Java_org_webrtc_video_VideoDecoderBypass_pushFrame(JNIEnv *env, jclass clazz, jstring jTrackId, jobject buffer,
-                                                      jint width, jint height, jlong frameTime, jint rotation, jint frameType) {
+                                                      jint width, jint height, jlong frameTime,
+                                                      jint rotation, jint frameType, jint codecType) {
     const char* key = env->GetStringUTFChars(jTrackId, NULL);
     if (!key) {
         return 0LL;
@@ -36,7 +37,7 @@ Java_org_webrtc_video_VideoDecoderBypass_pushFrame(JNIEnv *env, jclass clazz, js
     size_t dataSize = static_cast<size_t>(capacity);
     int ffi_result = pushVideoNativeBufferFFI(key, buf, dataSize,
                                              width, height, static_cast<uint64_t>(frameTime),
-                                             rotation, frameType);
+                                             rotation, frameType, static_cast<int>(codecType));
     env->ReleaseStringUTFChars(jTrackId, key);
     return static_cast<jlong>(ffi_result);
 }

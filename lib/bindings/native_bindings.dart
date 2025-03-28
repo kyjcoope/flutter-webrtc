@@ -48,6 +48,9 @@ base class VideoMetadata extends ffi.Struct {
 
   @ffi.Int32()
   external int frameType;
+
+  @ffi.Int32()
+  external int codecType;
 }
 
 base class AudioMetadata extends ffi.Struct {

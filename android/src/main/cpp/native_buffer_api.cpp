@@ -61,9 +61,9 @@ FFI_PLUGIN_EXPORT int initNativeBufferFFI(const char* key, int capacity, int max
 }
 
 FFI_PLUGIN_EXPORT int pushVideoNativeBufferFFI(const char* key, const uint8_t* buffer, size_t dataSize,
-  int width, int height, uint64_t frameTime, int rotation, int frameType) {
+    int width, int height, uint64_t frameTime, int rotation, int frameType, int codecType) {
     if (!key || !buffer || dataSize == 0) {
-         return 0;
+        return 0;
     }
     std::string skey(key);
     NativeBuffer* buffer_ptr = nullptr;
@@ -75,7 +75,8 @@ FFI_PLUGIN_EXPORT int pushVideoNativeBufferFFI(const char* key, const uint8_t* b
         }
         buffer_ptr = it->second.get();
     }
-    int result = buffer_ptr->pushVideoFrame(buffer, dataSize, width, height, frameTime, rotation, frameType);
+    int result = buffer_ptr->pushVideoFrame(buffer, dataSize, width, height, frameTime,
+                                            rotation, frameType, static_cast<VideoCodecType>(codecType));
     return handlePushResult(result, skey);
 }
 

@@ -18,6 +18,7 @@ class EncodedVideoFrame extends MediaFrame {
     required super.frameTime,
     required this.rotation,
     required this.frameType,
+    required this.codecType,
     required super.buffer,
   });
 
@@ -33,6 +34,7 @@ class EncodedVideoFrame extends MediaFrame {
       frameTime: nativeFrame.frameTime,
       rotation: nativeFrame.metadata.video.rotation,
       frameType: nativeFrame.metadata.video.frameType,
+      codecType: nativeFrame.metadata.video.codecType,
       buffer: buffer,
     );
   }
@@ -40,6 +42,7 @@ class EncodedVideoFrame extends MediaFrame {
   final int height;
   final int rotation;
   final int frameType;
+  final int codecType;
 }
 
 class DecodedAudioSample extends MediaFrame {

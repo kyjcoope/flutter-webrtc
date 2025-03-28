@@ -42,7 +42,7 @@ public class CustomVideoDecoderFactory implements VideoDecoderFactory {
         synchronized (trackQueue) {
             trackId = trackQueue.poll();
         }
-        VideoDecoderBypass decoder = new VideoDecoderBypass(trackId);
+        VideoDecoderBypass decoder = new VideoDecoderBypass(trackId, videoCodecInfo);
         return decoder;
     }
 
