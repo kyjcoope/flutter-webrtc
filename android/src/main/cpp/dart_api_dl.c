@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <android/log.h> // Add this for Android logging
 
 #define DART_API_DL_DEFINITIONS(name, R, A) name##_Type name##_DL = NULL;
 
@@ -46,23 +45,10 @@ DART_EXPORT void Dart_UpdateFinalizableExternalSize_Deprecated(
 intptr_t Dart_InitializeApiDL(void* data) {
   DartApi* dart_api_data = (DartApi*)data;
 
-  printf("Dart API versions - VM: %d.%d, Header: %d.%d\n",
-    dart_api_data->major, dart_api_data->minor,
-    DART_API_DL_MAJOR_VERSION, DART_API_DL_MINOR_VERSION);
-
-  // For Android, also log to logcat
-  __android_log_print(ANDROID_LOG_INFO, "DartAPI", 
-                  "Dart API versions - VM: %d.%d, Header: %d.%d", 
-                  dart_api_data->major, dart_api_data->minor,
-                  DART_API_DL_MAJOR_VERSION, DART_API_DL_MINOR_VERSION);
-
   if (dart_api_data->major != DART_API_DL_MAJOR_VERSION) {
     // If the DartVM we're running on does not have the same version as this
     // file was compiled against, refuse to initialize. The symbols are not
     // compatible.
-    __android_log_print(ANDROID_LOG_ERROR, "DartAPI", 
-      "Version mismatch: VM major=%d, Header major=%d", 
-      dart_api_data->major, DART_API_DL_MAJOR_VERSION);
     return -1;
   }
   // Minor versions are allowed to be different.
