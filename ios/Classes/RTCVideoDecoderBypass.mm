@@ -95,7 +95,7 @@
     int32_t width = encodedImage.encodedWidth;
     int32_t height = encodedImage.encodedHeight;
     int rotation = encodedImage.rotation;
-    int frameType = (int)encodedImage._type;
+    int frameType = (int)encodedImage.frameType;
     int codecTypeValue = [self codecStringToInt:(_codecInfo ? _codecInfo.name : nil)];
     BOOL pushSuccess = [NativeBufferBridge pushVideoBuffer:_trackId
                                                     buffer:buffer
