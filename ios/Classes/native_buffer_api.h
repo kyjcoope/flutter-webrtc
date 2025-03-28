@@ -17,7 +17,7 @@ extern "C" {
 
 FFI_PLUGIN_EXPORT int initNativeBufferFFI(const char* key, int capacity, int maxBufferSize);
 FFI_PLUGIN_EXPORT int pushVideoNativeBufferFFI(const char* key, const uint8_t* buffer, size_t dataSize,
-  int width, int height, uint64_t frameTime, int rotation, int frameType);
+  int width, int height, uint64_t frameTime, int rotation, int frameType, int codecType);
 FFI_PLUGIN_EXPORT int pushAudioNativeBufferFFI(const char* key, const uint8_t* buffer, size_t dataSize,
   int sampleRate, int channels, uint64_t frameTime);
 FFI_PLUGIN_EXPORT uintptr_t popNativeBufferFFI(const char* key);

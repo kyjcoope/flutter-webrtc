@@ -6,13 +6,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (BOOL)initializeBuffer:(NSString *)key capacity:(int)capacity maxBufferSize:(int)maxBufferSize;
 
-+ (unsigned long long)pushVideoBuffer:(NSString *)key 
-                              buffer:(NSData *)buffer
-                               width:(int)width 
-                              height:(int)height
-                           frameTime:(int64_t)frameTime
-                            rotation:(int)rotation
-                           frameType:(int)frameType;
++ (BOOL)pushVideoBuffer:(NSString *)key
+                 buffer:(NSData *)buffer
+                  width:(int)width
+                 height:(int)height
+              frameTime:(int64_t)frameTime
+               rotation:(int)rotation
+              frameType:(int)frameType
+              codecType:(int)codecType;
 
 + (BOOL)pushAudioBuffer:(NSString *)key
                  buffer:(NSData *)buffer

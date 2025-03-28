@@ -41,8 +41,7 @@ static NSMutableArray<NSString *> *trackQueue;
             NSLog(@"SuperDecoder: Warning: Creating decoder with no associated trackId");
         }
     }
-    
-    return [[RTCVideoDecoderBypass alloc] initWithTrackId:trackId];
+    return [[RTCVideoDecoderBypass alloc] initWithTrackId:trackId codecInfo:info];
 }
 
 - (NSArray<RTCVideoCodecInfo *> *)supportedCodecs {
