@@ -1,5 +1,5 @@
 #import "NativeBufferBridge.h"
-#import <flutter_webrtc/native_buffer_api.h>
+#import "native_buffer_api.h"
 
 @implementation NativeBufferBridge
 
