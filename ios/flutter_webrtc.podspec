@@ -11,10 +11,15 @@ Flutter WebRTC plugin with native C++ buffer implementation.
   s.source           = { :path => '.' }
   s.ios.deployment_target = '13.0'
   s.source_files = 'Classes/**/*.{h,m,mm,swift}'
-  s.public_header_files = 'Classes/**/*.h'
+  s.public_header_files = 'Classes/*Plugin.h'
   s.dependency 'Flutter'
   s.dependency 'WebRTC-SDK', '125.6422.06'
   s.dependency "#{s.name}/Core"
+  s.pod_target_xcconfig = {
+    'HEADER_SEARCH_PATHS' => '$(inherited)',
+    'HEADER_SEARCH_PATHS[sdk=iphoneos*]' => '$(inherited) "${PODS_ROOT}/Headers/Public/flutter_webrtc"',
+    'HEADER_SEARCH_PATHS[sdk=iphonesimulator*]' => '$(inherited) "${PODS_ROOT}/Headers/Public/flutter_webrtc"'
+  }
   s.subspec 'Core' do |ss|
     ss.source_files = 'src/**/*.{h,hpp,c,cpp}'
     ss.public_header_files = 'src/native_buffer_api.h'
