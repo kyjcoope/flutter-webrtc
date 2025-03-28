@@ -1,46 +1,45 @@
 require 'json'
-
-def find_flutter_root()
-  flutter_root = ENV['FLUTTER_ROOT']
-  return flutter_root unless flutter_root.nil? || flutter_root.empty?
-
-  potential_paths = [
-    File.expand_path('../../flutter', __dir__),
-    File.expand_path('../../../flutter', __dir__),
-    File.expand_path('../../../../flutter', __dir__)
-  ]
-  potential_paths.each do |path|
-    if File.exist?(File.join(path, 'bin', 'flutter'))
-      return path
-    end
-  end
-
-  begin
-    require 'open3'
-    stdout, stderr, status = Open3.capture3('which flutter')
-    if status.success?
-      resolved_flutter = File.realpath(stdout.strip)
-      flutter_root = File.dirname(File.dirname(resolved_flutter))
-      if File.exist?(File.join(flutter_root, 'bin', 'cache', 'dart-sdk'))
-        return flutter_root
-      end
-    end
-  rescue StandardError => e
-    puts "Warning: Error trying to find Flutter via 'which': #{e.message}"
-  end
-
-
-  raise "Error: Could not locate Flutter SDK. Set FLUTTER_ROOT environment variable or ensure Flutter SDK is in a standard relative path."
-end
-
-FLUTTER_ROOT = find_flutter_root()
-DART_SDK_PATH = File.join(FLUTTER_ROOT, 'bin', 'cache', 'dart-sdk')
-
-unless Dir.exist?(File.join(DART_SDK_PATH, 'include'))
-  raise "Dart SDK include directory not found: #{File.join(DART_SDK_PATH, 'include')}. Please ensure Flutter SDK is correctly bootstrapped (`flutter doctor`)."
-end
+require 'open3'
 
 Pod::Spec.new do |s|
+  def find_flutter_root()
+    flutter_root = ENV['FLUTTER_ROOT']
+    return flutter_root unless flutter_root.nil? || flutter_root.empty?
+
+    potential_paths = [
+      File.expand_path('../../flutter', __dir__),
+      File.expand_path('../../../flutter', __dir__),
+      File.expand_path('../../../../flutter', __dir__)
+    ]
+    potential_paths.each do |path|
+      if File.exist?(File.join(path, 'bin', 'flutter'))
+      end
+    end
+
+    begin
+      stdout, stderr, status = Open3.capture3('which flutter')
+      if status.success?
+        resolved_flutter = File.realpath(stdout.strip)
+        flutter_root = File.dirname(File.dirname(resolved_flutter))
+        if File.exist?(File.join(flutter_root, 'bin', 'cache', 'dart-sdk'))
+          return flutter_root
+        end
+      end
+    rescue StandardError => e
+      puts "Warning: Error trying to find Flutter via 'which': #{e.message}"
+    end
+
+    raise "Error: Could not locate Flutter SDK. Set FLUTTER_ROOT environment variable or ensure Flutter SDK is in a standard relative path."
+  end
+
+  FLUTTER_ROOT = find_flutter_root()
+  DART_SDK_PATH = File.join(FLUTTER_ROOT, 'bin', 'cache', 'dart-sdk')
+
+  dart_include_path = File.join(DART_SDK_PATH, 'include')
+  unless Dir.exist?(dart_include_path)
+    raise "Dart SDK include directory not found at expected path: #{dart_include_path}. Please ensure Flutter SDK is correctly bootstrapped (`flutter doctor`)."
+  end
+
   s.name             = 'flutter_webrtc'
   s.version          = '0.12.6'
   s.summary          = 'Flutter WebRTC plugin for iOS.'
@@ -62,5 +61,5 @@ A new flutter plugin project.
     'GCC_PREPROCESSOR_DEFINITIONS' => '$(inherited) DART_API_DL_IMPLEMENTATION=1'
   }
   s.static_framework = true
-  s.library = 'c++', 'pthread'
+  s.libraries = 'c++', 'pthread'
 end
