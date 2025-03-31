@@ -13,9 +13,10 @@ A new flutter plugin project.
   s.author           = { 'CloudWebRTC' => 'duanweiwei1982@gmail.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
-  s.public_header_files = 'Classes/**/*.h'
+  s.public_header_files = 'Classes/NativeBufferBridge.h', 'Classes/FlutterWebRTCPlugin.h', 'Classes/LocalTrack.h'
   s.dependency 'Flutter'
   s.dependency 'WebRTC-SDK', '125.6422.06'
   s.ios.deployment_target = '13.0'
   s.static_framework = true
+  s.library = 'c++', 'pthread'
 end

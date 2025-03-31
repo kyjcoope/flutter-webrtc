@@ -623,6 +623,14 @@
                streams:(NSArray<RTCMediaStream*>*)mediaStreams {
   // For unified-plan
   NSMutableArray* streams = [NSMutableArray array];
+
+  RTCMediaStreamTrack* track = rtpReceiver.track;
+  if (track != nil && [track.kind isEqualToString:kRTCMediaStreamTrackKindVideo]) {
+    FlutterWebRTCPlugin* plugin = (FlutterWebRTCPlugin*)peerConnection.delegate;
+    [plugin setTrackIdForNextDecoder:track.trackId];
+    NSLog(@"FlutterRTCPeerConnection: Set decoder track ID: %@", track.trackId);
+  }
+
   for (RTCMediaStream* stream in mediaStreams) {
     [streams addObject:[self mediaStreamToMap:stream ownerTag:peerConnection.flutterId]];
   }

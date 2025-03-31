@@ -16,6 +16,8 @@ example/ios/Runner/GeneratedPluginRegistrant.h
 example/ios/Flutter/Generated.xcconfig
 example/ios/Flutter/flutter_export_environment.sh
 
+android/.cxx/*
+
 # Miscellaneous
 *.class
 *.log

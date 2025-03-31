@@ -78,6 +78,7 @@ import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
 import org.webrtc.video.CustomVideoDecoderFactory;
 import org.webrtc.video.CustomVideoEncoderFactory;
+import org.webrtc.audio.AudioBufferUtil;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -149,6 +150,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     for (final MediaStream mediaStream : localStreams.values()) {
       streamDispose(mediaStream);
       mediaStream.dispose();
+      AudioBufferUtil.dispose();
     }
     localStreams.clear();
     for (final LocalTrack track : localTracks.values()) {
@@ -217,6 +219,22 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
     audioDeviceModuleBuilder.setSamplesReadyCallback(recordSamplesReadyCallbackAdapter);
     audioDeviceModuleBuilder.setPlaybackSamplesReadyCallback(playbackSamplesReadyCallbackAdapter);
+
+    playbackSamplesReadyCallbackAdapter.addCallback(new JavaAudioDeviceModule.PlaybackSamplesReadyCallback() {
+      @Override
+      public void onWebRtcAudioTrackSamplesReady(JavaAudioDeviceModule.AudioSamples audioSamples) {
+        if (!AudioBufferUtil.ensureInitialized(30, 48000 * 2 * 5)) {
+            Log.e(TAG, "Failed to initialize native audio buffer");
+            return;
+        }
+        
+        long framePtr = AudioBufferUtil.pushAudioSamples(
+            audioSamples.getData(),
+            audioSamples.getSampleRate(),
+            audioSamples.getChannelCount()
+        );
+      }
+    });
 
     recordSamplesReadyCallbackAdapter.addCallback(getUserMediaImpl.inputSamplesInterceptor);
 

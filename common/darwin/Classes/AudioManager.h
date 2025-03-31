@@ -16,4 +16,8 @@
 
 - (void)removeLocalAudioRenderer:(nonnull id<RTCAudioRenderer>)renderer;
 
+- (void)addRemoteAudioSink:(nonnull id<RTCAudioRenderer>)sink;
+
+- (void)removeRemoteAudioSink:(nonnull id<RTCAudioRenderer>)sink;
+
 @end

@@ -7,6 +7,60 @@
 #import "VideoProcessingAdapter.h"
 #import "LocalVideoTrack.h"
 #import "LocalAudioTrack.h"
+#import "NativeBufferBridge.h"
+#import "AudioManager.h"
+
+@implementation RTCAudioInterceptor {
+    BOOL _initialized;
+}
+
+- (instancetype)init {
+    self = [super init];
+    if (self) {
+        _initialized = NO;
+        NSLog(@"RTCAudioInterceptor initialized");
+    }
+    return self;
+}
+
+- (void)renderPCMBuffer:(AVAudioPCMBuffer *)pcmBuffer {
+    NSString* audioBufferKey = @"webrtc_audio_output";
+    
+    if (!_initialized) {
+        NSLog(@"Initializing native audio buffer");
+        int capacity = 30;
+        int maxBufferSize = 48000 * 2 * 5;
+        
+        _initialized = [NativeBufferBridge initializeBuffer:audioBufferKey 
+                                                   capacity:capacity 
+                                               maxBufferSize:maxBufferSize];
+        
+        if (!_initialized) {
+            NSLog(@"Failed to initialize native audio buffer");
+            return;
+        }
+    }
+    
+    int16_t* audioData = pcmBuffer.int16ChannelData[0];
+    UInt32 numFrames = (UInt32)pcmBuffer.frameLength;
+    int channelCount = (int)pcmBuffer.format.channelCount;
+    int sampleRate = (int)pcmBuffer.format.sampleRate;
+    
+    NSUInteger dataSize = numFrames * sizeof(int16_t) * channelCount;
+    
+    NSData *byteData = [NSData dataWithBytes:audioData length:dataSize];
+    
+    BOOL success = [NativeBufferBridge pushAudioBuffer:audioBufferKey 
+                                                buffer:byteData 
+                                            sampleRate:sampleRate 
+                                              channels:channelCount];
+    
+    if (!success) {
+        NSLog(@"Failed to push audio to native buffer");
+    }
+}
+
+@end
 
 @implementation RTCMediaStreamTrack (Flutter)
 
@@ -53,6 +107,14 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
 
 - (NSDictionary*)defaultAudioConstraints {
     return @{};
+}
+
+- (RTCAudioInterceptor *)audioInterceptor {
+    return objc_getAssociatedObject(self, @selector(audioInterceptor));
+}
+
+- (void)setAudioInterceptor:(RTCAudioInterceptor *)audioInterceptor {
+    objc_setAssociatedObject(self, @selector(audioInterceptor), audioInterceptor, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }
 
 
@@ -985,6 +1047,29 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
     maxSupportedFramerate = fmax(maxSupportedFramerate, fpsRange.maxFrameRate);
   }
   return fmin(maxSupportedFramerate, targetFps);
+}
+
+- (void)startAudioInterception {
+    NSLog(@"Starting audio interception");
+    
+    if (!self.audioInterceptor) {
+        self.audioInterceptor = [[RTCAudioInterceptor alloc] init];
+        
+        [[AudioManager sharedInstance] addRemoteAudioSink:self.audioInterceptor];
+        
+        NSLog(@"Audio renderer added to AudioManager");
+    }
+}
+
+- (void)stopAudioInterception {
+    NSLog(@"Stopping audio interception");
+    
+    if (self.audioInterceptor) {
+        [[AudioManager sharedInstance] removeRemoteAudioSink:self.audioInterceptor];
+        self.audioInterceptor = nil;
+        
+        NSLog(@"Audio renderer removed from AudioManager");
+    }
 }
 
 @end

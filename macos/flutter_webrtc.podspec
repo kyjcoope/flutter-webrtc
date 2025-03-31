@@ -12,7 +12,8 @@ A new flutter plugin project.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'CloudWebRTC' => 'duanweiwei1982@gmail.com' }
   s.source           = { :path => '.' }
-  s.source_files     = ['Classes/**/*']
+  s.source_files = 'Classes/**/*', '../common/cpp/include/buffer/*.h', '../common/cpp/src/buffer/*.cpp'
+  s.library = 'c++', 'pthread'
 
   s.dependency 'FlutterMacOS'
   s.dependency 'WebRTC-SDK', '125.6422.06'
