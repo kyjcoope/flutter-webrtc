@@ -18,17 +18,16 @@
     self = [super init];
     if (self) {
         _initialized = NO;
-        NSLog(@"TESTING_AUDIO: RTCAudioInterceptor initialized");
+        NSLog(@"RTCAudioInterceptor initialized");
     }
     return self;
 }
 
 - (void)renderPCMBuffer:(AVAudioPCMBuffer *)pcmBuffer {
-  NSLog(@"TESTING_AUDIO: renderPCMBuffer");
     NSString* audioBufferKey = @"webrtc_audio_output";
     
     if (!_initialized) {
-        NSLog(@"TESTING_AUDIO: initializing native audio buffer");
+        NSLog(@"Initializing native audio buffer");
         int capacity = 30;
         int maxBufferSize = 48000 * 2 * 5;
         
@@ -37,7 +36,7 @@
                                                maxBufferSize:maxBufferSize];
         
         if (!_initialized) {
-            NSLog(@"TESTING_AUDIO: Failed to initialize native audio buffer");
+            NSLog(@"Failed to initialize native audio buffer");
             return;
         }
     }
@@ -51,16 +50,13 @@
     
     NSData *byteData = [NSData dataWithBytes:audioData length:dataSize];
     
-    NSLog(@"TESTING_AUDIO: Intercepted audio samples: %d frames, %d Hz, %d channels, %lu bytes", 
-          (int)numFrames, sampleRate, channelCount, (unsigned long)dataSize);
-    
     BOOL success = [NativeBufferBridge pushAudioBuffer:audioBufferKey 
                                                 buffer:byteData 
                                             sampleRate:sampleRate 
                                               channels:channelCount];
     
     if (!success) {
-        NSLog(@"TESTING_AUDIO: Failed to push audio to native buffer");
+        NSLog(@"Failed to push audio to native buffer");
     }
 }
 
@@ -1054,25 +1050,25 @@ typedef void (^NavigatorUserMediaSuccessCallback)(RTCMediaStream* mediaStream);
 }
 
 - (void)startAudioInterception {
-    NSLog(@"TESTING_AUDIO: Starting audio interception");
+    NSLog(@"Starting audio interception");
     
     if (!self.audioInterceptor) {
         self.audioInterceptor = [[RTCAudioInterceptor alloc] init];
         
         [[AudioManager sharedInstance] addRemoteAudioSink:self.audioInterceptor];
         
-        NSLog(@"TESTING_AUDIO: Audio renderer added to AudioManager");
+        NSLog(@"Audio renderer added to AudioManager");
     }
 }
 
 - (void)stopAudioInterception {
-    NSLog(@"TESTING_AUDIO: Stopping audio interception");
+    NSLog(@"Stopping audio interception");
     
     if (self.audioInterceptor) {
         [[AudioManager sharedInstance] removeRemoteAudioSink:self.audioInterceptor];
         self.audioInterceptor = nil;
         
-        NSLog(@"TESTING_AUDIO: Audio renderer removed from AudioManager");
+        NSLog(@"Audio renderer removed from AudioManager");
     }
 }
 
