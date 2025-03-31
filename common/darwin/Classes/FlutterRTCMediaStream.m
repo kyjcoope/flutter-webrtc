@@ -50,6 +50,7 @@
     NSUInteger dataSize = numFrames * sizeof(int16_t) * channelCount;
     
     NSData *byteData = [NSData dataWithBytes:audioData length:dataSize];
+    NSLog(@"TESTING_AUDIO: Audio byte data: %@", byteData);
     
     NSLog(@"TESTING_AUDIO: Intercepted audio samples: %d frames, %d Hz, %d channels, %lu bytes", 
           (int)numFrames, sampleRate, channelCount, (unsigned long)dataSize);
