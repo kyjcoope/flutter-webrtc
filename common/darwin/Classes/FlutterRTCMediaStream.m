@@ -50,8 +50,26 @@
     NSUInteger dataSize = numFrames * sizeof(int16_t) * channelCount;
     
     NSData *byteData = [NSData dataWithBytes:audioData length:dataSize];
-    NSString *hex = [[byteData subdataWithRange:NSMakeRange(0, MIN(30, byteData.length))] description];
-    NSLog(@"TESTING_AUDIO: First 30 bytes: %@", hex);
+    // Print audio data in chunks of 10 bytes
+    NSMutableString *hexString = [NSMutableString string];
+    const uint8_t *bytes = byteData.bytes;
+    NSUInteger length = byteData.length;
+    
+    // Limit to first 50 bytes to avoid log flooding
+    NSUInteger maxBytesToLog = MIN(50, length);
+    
+    for (NSUInteger i = 0; i < maxBytesToLog; i++) {
+      [hexString appendFormat:@"%02X ", bytes[i]];
+      
+      // Print 10 bytes per line
+      if ((i + 1) % 10 == 0 || i == maxBytesToLog - 1) {
+        NSLog(@"TESTING_AUDIO: Bytes %lu-%lu: %@", 
+            (unsigned long)(i / 10) * 10, 
+            (unsigned long)MIN(i, length - 1), 
+            hexString);
+        [hexString setString:@""];
+      }
+    }
     
     NSLog(@"TESTING_AUDIO: Intercepted audio samples: %d frames, %d Hz, %d channels, %lu bytes", 
           (int)numFrames, sampleRate, channelCount, (unsigned long)dataSize);
