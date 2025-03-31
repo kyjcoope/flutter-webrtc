@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 enum PeerConnectionState {
@@ -166,6 +167,20 @@ class WebRTCRemotePeer {
           : await createLocalMediaStream(_streamLabel!);
 
       await Helper.setSpeakerphoneOn(true);
+
+      if (Platform.isIOS) {
+        await Helper.setAppleAudioConfiguration(
+          AppleAudioConfiguration(
+            appleAudioCategory: AppleAudioCategory.playAndRecord,
+            appleAudioCategoryOptions: {
+              AppleAudioCategoryOption.defaultToSpeaker,
+              AppleAudioCategoryOption.allowBluetooth,
+              AppleAudioCategoryOption.mixWithOthers,
+            },
+            appleAudioMode: AppleAudioMode.voiceChat,
+          ),
+        );
+      }
 
       if (!_mediaStreamController.isClosed) {
         _mediaStreamController.add(mediaStream!);
