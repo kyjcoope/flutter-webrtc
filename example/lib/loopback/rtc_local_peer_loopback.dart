@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-class WebRTCLocalPeer {
+class WebRTCLocalPeerLoopback {
   RTCPeerConnection? connection;
   MediaStream? mediaStream;
   RTCRtpSender? audioSender;

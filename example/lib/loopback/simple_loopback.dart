@@ -1,19 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter_webrtc_example/loopback/rtc_local_peer_loopback.dart';
 
-import 'audio/audio_decoder_connector.dart';
-import 'video/video_decoder_connector.dart';
+import '../audio/audio_decoder_connector.dart';
+import '../video/video_decoder_connector.dart';
+import 'rtc_remote_peer_loopback.dart';
 
-class FrameCaptureSample extends StatefulWidget {
+class SimpleLoopback extends StatefulWidget {
   @override
-  _FrameCaptureSampleState createState() => _FrameCaptureSampleState();
+  _SimpleLoopbackState createState() => _SimpleLoopbackState();
 }
 
-class _FrameCaptureSampleState extends State<FrameCaptureSample> {
-  final WebRTCLocalPeer _localPeer = WebRTCLocalPeer();
-  final WebRTCRemotePeer _remotePeer = WebRTCRemotePeer();
+class _SimpleLoopbackState extends State<SimpleLoopback> {
+  final WebRTCLocalPeerLoopback _localPeer = WebRTCLocalPeerLoopback();
+  final WebRTCRemotePeerLoopback _remotePeer = WebRTCRemotePeerLoopback();
   final VideoDecoderConnector _videoDecoder = VideoDecoderConnector();
   final AudioDecoderConnector _audioDecoder = AudioDecoderConnector();
   final List<String> _logs = [];

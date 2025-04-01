@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:http/http.dart' as http;
 
 enum PeerConnectionState {
   initial,
@@ -15,9 +17,13 @@ typedef VideoFrameSetupCallback = Future<void> Function(String trackId);
 typedef AudioFrameSetupCallback = Future<void> Function();
 
 class WebRTCRemotePeer {
-  String? _streamLabel;
-  RTCPeerConnection? connection;
-  MediaStream? mediaStream;
+  RTCPeerConnection? _connection;
+  MediaStream? _mediaStream;
+  bool _isConnecting = false;
+  bool _isConnected = false;
+
+  VideoFrameSetupCallback? _onVideoTrackCallback;
+  AudioFrameSetupCallback? _onAudioTrackCallback;
 
   final StreamController<MediaStream> _mediaStreamController =
       StreamController<MediaStream>.broadcast();
@@ -26,218 +32,206 @@ class WebRTCRemotePeer {
   final StreamController<RTCIceCandidate> _iceCandidateController =
       StreamController<RTCIceCandidate>.broadcast();
 
-  VideoFrameSetupCallback? _onVideoTrackCallback;
-  AudioFrameSetupCallback? _onAudioTrackCallback;
-
-  bool _isInitialized = false;
-  int _reconnectAttempts = 0;
-  Map<String, dynamic>? _lastConfiguration;
-
   Stream<MediaStream> get onMediaStream => _mediaStreamController.stream;
   Stream<PeerConnectionState> get onConnectionStateChange =>
       _connectionStateController.stream;
   Stream<RTCIceCandidate> get onIceCandidate => _iceCandidateController.stream;
 
-  Future<void> initialize({
+  Future<void> connect({
+    required String signalingUrl,
+    required VideoFrameSetupCallback onVideoTrack,
+    required AudioFrameSetupCallback onAudioTrack,
     Map<String, dynamic>? configuration,
-    String? streamLabel,
-    VideoFrameSetupCallback? onVideoTrack,
-    AudioFrameSetupCallback? onAudioTrack,
+    Map<String, dynamic>? offerConstraints,
   }) async {
-    if (_isInitialized) {
-      await close();
+    if (_isConnecting || _isConnected) {
+      print('WebRTCRemotePeer: Already connecting or connected.');
+      return;
     }
+    _isConnecting = true;
+    _isConnected = false;
+    _connectionStateController.add(PeerConnectionState.connecting);
 
-    _streamLabel = streamLabel;
     _onVideoTrackCallback = onVideoTrack;
     _onAudioTrackCallback = onAudioTrack;
 
-    _lastConfiguration = configuration ??
+    final peerConfig = configuration ??
         {
           'iceServers': [
-            {'urls': 'stun:stun.l.google.com:19302'},
+            {'urls': 'stun:stun.l.google.com:19302'}
           ],
           'sdpSemantics': 'unified-plan'
         };
 
-    connection = await createPeerConnection(_lastConfiguration!);
-    _setupEventHandlers();
-    _isInitialized = true;
-    _connectionStateController.add(PeerConnectionState.initial);
+    final constraints = offerConstraints ??
+        {
+          'mandatory': {
+            'OfferToReceiveVideo': true,
+            'OfferToReceiveAudio': true,
+          },
+        };
+
+    try {
+      _connection = await createPeerConnection(peerConfig);
+      _setupEventHandlers();
+
+      print('WebRTCRemotePeer: Creating offer...');
+      final offer = await _connection!.createOffer(constraints);
+      await _connection!.setLocalDescription(offer);
+      print('WebRTCRemotePeer: Offer created and local description set.');
+
+      print('WebRTCRemotePeer: Sending offer to $signalingUrl');
+      final response = await http
+          .post(
+            Uri.parse(signalingUrl),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'sdp': offer.sdp, 'type': offer.type}),
+          )
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final answerJson = jsonDecode(response.body);
+        final answer = RTCSessionDescription(
+          answerJson['sdp'],
+          answerJson['type'],
+        );
+        print('WebRTCRemotePeer: Received answer from server.');
+
+        await _connection!.setRemoteDescription(answer);
+        print(
+            'WebRTCRemotePeer: Remote description set. Connection establishing...');
+      } else {
+        throw Exception(
+            'Signaling server error ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      print('WebRTCRemotePeer: Connection failed: $e');
+      _connectionStateController.add(PeerConnectionState.failed);
+      await close();
+      _isConnecting = false;
+      _isConnected = false;
+    }
   }
 
   void _setupEventHandlers() {
-    connection!.onTrack = _handleTrack;
-
-    connection!.onIceCandidate = (candidate) {
+    _connection!.onTrack = _handleTrack;
+    _connection!.onIceCandidate = (candidate) {
       if (!_iceCandidateController.isClosed) {
         _iceCandidateController.add(candidate);
       }
     };
-
-    connection!.onIceConnectionState = (state) {
+    _connection!.onIceConnectionState = (state) {
+      print('WebRTCRemotePeer: ICE Connection State: $state');
       switch (state) {
         case RTCIceConnectionState.RTCIceConnectionStateConnected:
-          _connectionStateController.add(PeerConnectionState.connected);
-          _reconnectAttempts = 0;
+        case RTCIceConnectionState.RTCIceConnectionStateCompleted:
+          if (!_isConnected && !_isConnecting) return;
+          if (!_connectionStateController.isClosed && _isConnected == false) {
+            _connectionStateController.add(PeerConnectionState.connected);
+            _isConnected = true;
+            _isConnecting = false;
+          }
           break;
         case RTCIceConnectionState.RTCIceConnectionStateDisconnected:
-          _connectionStateController.add(PeerConnectionState.disconnected);
+          if (!_isConnected && !_isConnecting) return;
+          if (!_connectionStateController.isClosed) {
+            _connectionStateController.add(PeerConnectionState.disconnected);
+            _isConnected = false;
+            _isConnecting = false;
+          }
           break;
         case RTCIceConnectionState.RTCIceConnectionStateFailed:
-          _connectionStateController.add(PeerConnectionState.failed);
-          if (_reconnectAttempts < 3) {
-            _attemptReconnection();
+          if (!_isConnected && !_isConnecting) return;
+          if (!_connectionStateController.isClosed) {
+            _connectionStateController.add(PeerConnectionState.failed);
+            _isConnected = false;
+            _isConnecting = false;
+            close();
           }
           break;
         case RTCIceConnectionState.RTCIceConnectionStateClosed:
-          _connectionStateController.add(PeerConnectionState.closed);
+          if (!_isConnected &&
+              !_isConnecting &&
+              _connectionStateController.isClosed) {
+            return;
+          }
+          if (!_connectionStateController.isClosed) {
+            _connectionStateController.add(PeerConnectionState.closed);
+            _isConnected = false;
+            _isConnecting = false;
+          }
           break;
         default:
           break;
       }
     };
-
-    connection!.onConnectionState = (state) {
-      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
-        _connectionStateController.add(PeerConnectionState.connected);
-        _reconnectAttempts = 0;
-      }
+    _connection!.onConnectionState = (state) {
+      print('WebRTCRemotePeer: Peer Connection State: $state');
     };
   }
 
-  Future<void> _attemptReconnection() async {
-    _reconnectAttempts++;
-    _connectionStateController.add(PeerConnectionState.connecting);
-
-    try {
-      await initialize(
-        configuration: _lastConfiguration,
-        streamLabel: _streamLabel,
-        onVideoTrack: _onVideoTrackCallback,
-        onAudioTrack: _onAudioTrackCallback,
-      );
-    } catch (e) {
-      _connectionStateController.add(PeerConnectionState.failed);
-    }
-  }
-
-  Future<RTCSessionDescription> createOffer(
-      {Map<String, dynamic>? constraints}) async {
-    _ensureInitialized();
-
-    final offer = await connection!.createOffer(constraints ?? {});
-    await connection!.setLocalDescription(offer);
-    return offer;
-  }
-
-  Future<RTCSessionDescription> createAnswerFromOffer(
-      RTCSessionDescription offer,
-      {Map<String, dynamic>? constraints}) async {
-    _ensureInitialized();
-
-    await connection!.setRemoteDescription(offer);
-    final answer = await connection!.createAnswer(constraints ?? {});
-    await connection!.setLocalDescription(answer);
-    return answer;
-  }
-
-  Future<void> setRemoteDescription(RTCSessionDescription description) async {
-    _ensureInitialized();
-    await connection!.setRemoteDescription(description);
-  }
-
-  Future<void> addIceCandidate(RTCIceCandidate candidate) async {
-    _ensureInitialized();
-    await connection!.addCandidate(candidate);
-  }
-
-  Future<void> addIceCandidates(List<RTCIceCandidate> candidates) async {
-    _ensureInitialized();
-    for (var candidate in candidates) {
-      await connection!.addCandidate(candidate);
-    }
-  }
-
   Future<void> _handleTrack(RTCTrackEvent event) async {
-    if (mediaStream == null) {
-      _streamLabel ??= 'stream_${DateTime.now().millisecondsSinceEpoch}';
-      mediaStream = event.streams.isNotEmpty
-          ? event.streams[0]
-          : await createLocalMediaStream(_streamLabel!);
-
+    print(
+        'WebRTCRemotePeer: Track received - Kind: ${event.track.kind}, ID: ${event.track.id}');
+    if (event.streams.isEmpty) {
+      print('WebRTCRemotePeer: Error - Track event received with no streams.');
+      return;
+    }
+    if (_mediaStream == null) {
+      _mediaStream = event.streams[0];
+      print('WebRTCRemotePeer: Assigned MediaStream: ${_mediaStream!.id}');
       await Helper.setSpeakerphoneOn(true);
-
       if (Platform.isIOS) {
-        await Helper.setAppleAudioConfiguration(
-          AppleAudioConfiguration(
-            appleAudioCategory: AppleAudioCategory.playAndRecord,
-            appleAudioCategoryOptions: {
-              AppleAudioCategoryOption.defaultToSpeaker,
-              AppleAudioCategoryOption.allowBluetooth,
-              AppleAudioCategoryOption.mixWithOthers,
-            },
-            appleAudioMode: AppleAudioMode.voiceChat,
-          ),
-        );
+        if (Platform.isIOS) {
+          await Helper.setAppleAudioConfiguration(
+            AppleAudioConfiguration(
+              appleAudioCategory: AppleAudioCategory.playAndRecord,
+              appleAudioCategoryOptions: {
+                AppleAudioCategoryOption.defaultToSpeaker,
+                AppleAudioCategoryOption.allowBluetooth,
+                AppleAudioCategoryOption.mixWithOthers,
+              },
+              appleAudioMode: AppleAudioMode.voiceChat,
+            ),
+          );
+        }
       }
-
       if (!_mediaStreamController.isClosed) {
-        _mediaStreamController.add(mediaStream!);
+        _mediaStreamController.add(_mediaStream!);
       }
     }
-
-    if (!mediaStream!.getTracks().contains(event.track)) {
-      await mediaStream!.addTrack(event.track);
-    }
-
     if (event.track.kind == 'video' && event.track.id != null) {
-      if (_onVideoTrackCallback != null) {
-        await _onVideoTrackCallback!(event.track.id!);
-      }
+      await _onVideoTrackCallback?.call(event.track.id!);
     } else if (event.track.kind == 'audio') {
-      if (_onAudioTrackCallback != null) {
-        await _onAudioTrackCallback!();
-      }
+      await _onAudioTrackCallback?.call();
     }
-  }
-
-  void _ensureInitialized() {
-    if (!_isInitialized || connection == null) {
-      throw StateError(
-          'WebRTCRemotePeer not initialized. Call initialize() first.');
-    }
-  }
-
-  Future<List<StatsReport>> getStats() async {
-    _ensureInitialized();
-
-    final stats = await connection!.getStats();
-    return stats;
   }
 
   Future<void> close() async {
-    if (mediaStream != null) {
-      for (var track in mediaStream!.getTracks()) {
-        await track.stop();
+    print('WebRTCRemotePeer: Closing connection...');
+    if (_mediaStream != null) {
+      _mediaStream = null;
+    }
+    if (_connection != null) {
+      await _connection!.close();
+      _connection = null;
+    }
+    if (_isConnected || _isConnecting) {
+      if (!_connectionStateController.isClosed) {
+        _connectionStateController.add(PeerConnectionState.closed);
       }
-      mediaStream = null;
     }
-
-    if (connection != null) {
-      await connection!.close();
-      connection = null;
-    }
-
-    _connectionStateController.add(PeerConnectionState.closed);
-    _isInitialized = false;
+    _isConnected = false;
+    _isConnecting = false;
+    print('WebRTCRemotePeer: Connection closed.');
   }
 
   Future<void> dispose() async {
+    print('WebRTCRemotePeer: Disposing...');
     await close();
-
     await _mediaStreamController.close();
     await _connectionStateController.close();
     await _iceCandidateController.close();
+    print('WebRTCRemotePeer: Disposed.');
   }
 }
