@@ -75,6 +75,33 @@ class WebRTCRemotePeer {
       _connection = await createPeerConnection(peerConfig);
       _setupEventHandlers();
 
+      var transceivers = await _connection?.getTransceivers();
+      print('WebRTCRemotePeer: Transceivers: ${transceivers?.length}');
+
+      RTCRtpTransceiver? videoTransceiver = await _connection!.addTransceiver(
+          kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
+          init:
+              RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
+
+      var capabilities = await getRtpSenderCapabilities('video');
+      if (capabilities.codecs != null) {
+        List<RTCRtpCodecCapability> h264Codecs = capabilities.codecs!
+            .where((codec) => codec.mimeType.toLowerCase() == 'h264')
+            .toList();
+
+        if (h264Codecs.isNotEmpty) {
+          print('WebRTCRemotePeer: Setting H.264 codec preference...');
+          await videoTransceiver.setCodecPreferences(h264Codecs);
+          print('WebRTCRemotePeer: H.264 preference set.');
+        } else {
+          print(
+              'WebRTCRemotePeer: Warning - H.264 codec not found in receiver capabilities.');
+        }
+      } else {
+        print(
+            'WebRTCRemotePeer: Warning - Could not get receiver capabilities.');
+      }
+
       print('WebRTCRemotePeer: Creating offer...');
       final offer = await _connection!.createOffer(constraints);
       await _connection!.setLocalDescription(offer);
