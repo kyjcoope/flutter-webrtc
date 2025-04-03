@@ -4,18 +4,6 @@ import 'dart:io';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:http/http.dart' as http;
 
-enum PeerConnectionState {
-  initial,
-  connecting,
-  connected,
-  disconnected,
-  failed,
-  closed
-}
-
-typedef VideoFrameSetupCallback = Future<void> Function(String trackId);
-typedef AudioFrameSetupCallback = Future<void> Function();
-
 class WebRTCRemotePeer {
   RTCPeerConnection? _connection;
   MediaStream? _mediaStream;
