@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc_example/loopback/rtc_local_peer_loopback.dart';
+import 'package:flutter_webrtc/src/loopback/rtc_local_peer_loopback.dart';
 
-import '../audio/audio_decoder_connector.dart';
-import '../video/video_decoder_connector.dart';
-import 'rtc_remote_peer_loopback.dart';
+import 'audio/audio_decoder_connector.dart';
+import 'loopback/rtc_remote_peer_loopback.dart';
+import 'video/video_decoder_connector.dart';
 
 class SimpleLoopback extends StatefulWidget {
   @override
