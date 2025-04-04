@@ -63,21 +63,21 @@ class WebRTCRemotePeer {
       _connection = await createPeerConnection(peerConfig);
       _setupEventHandlers();
 
-      RTCRtpTransceiver? videoTransceiver = await _connection!.addTransceiver(
-          kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
-          init:
-              RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
+      // RTCRtpTransceiver? videoTransceiver = await _connection!.addTransceiver(
+      //     kind: RTCRtpMediaType.RTCRtpMediaTypeVideo,
+      //     init:
+      //         RTCRtpTransceiverInit(direction: TransceiverDirection.RecvOnly));
 
-      final capabilities = await getRtpSenderCapabilities('video');
-      if (capabilities.codecs != null) {
-        List<RTCRtpCodecCapability> codecs = capabilities.codecs!
-            .where((codec) => codec.mimeType.toLowerCase() == 'h264')
-            .toList();
-        await videoTransceiver.setCodecPreferences(codecs);
-      } else {
-        print(
-            'WebRTCRemotePeer: Warning - Could not get receiver capabilities.');
-      }
+      // final capabilities = await getRtpSenderCapabilities('video');
+      // if (capabilities.codecs != null) {
+      //   List<RTCRtpCodecCapability> codecs = capabilities.codecs!
+      //       .where((codec) => codec.mimeType.toLowerCase() == 'h264')
+      //       .toList();
+      //   await videoTransceiver.setCodecPreferences(codecs);
+      // } else {
+      //   print(
+      //       'WebRTCRemotePeer: Warning - Could not get receiver capabilities.');
+      // }
 
       print('WebRTCRemotePeer: Creating offer...');
       final offer = await _connection!.createOffer(constraints);
