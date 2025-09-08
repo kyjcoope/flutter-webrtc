@@ -175,39 +175,52 @@ public class RawFrameCapturer implements VideoSink {
     }
 
     private static void packI420(VideoFrame.I420Buffer i420, ByteBuffer out) {
-        // Copy Y plane
-        copyPlane(
-                i420.getDataY(), i420.getStrideY(),
-                i420.getWidth(), i420.getHeight(),
-                out
-        );
+        final int width = i420.getWidth();
+        final int height = i420.getHeight();
+        final int chromaW = (width + 1) / 2;
+        final int chromaH = (height + 1) / 2;
 
-        // Copy U plane (chroma)
-        final int chromaW = (i420.getWidth() + 1) / 2;
-        final int chromaH = (i420.getHeight() + 1) / 2;
-        copyPlane(
-                i420.getDataU(), i420.getStrideU(),
-                chromaW, chromaH,
-                out
-        );
-
-        // Copy V plane (chroma)
-        copyPlane(
-                i420.getDataV(), i420.getStrideV(),
-                chromaW, chromaH,
-                out
-        );
+        copyPlaneSafe(i420.getDataY(), i420.getStrideY(), width, height, out, "Y");
+        copyPlaneSafe(i420.getDataU(), i420.getStrideU(), chromaW, chromaH, out, "U");
+        copyPlaneSafe(i420.getDataV(), i420.getStrideV(), chromaW, chromaH, out, "V");
         out.flip();
     }
 
-    private static void copyPlane(ByteBuffer src, int srcStride, int width, int height, ByteBuffer dst) {
-        final ByteBuffer srcDup = src.slice();
-        final int rowBytes = width;
+    private static void copyPlaneSafe(ByteBuffer src,
+                                      int srcStride,
+                                      int width,
+                                      int height,
+                                      ByteBuffer dst,
+                                      String label) {
+        // Some implementations may have srcStride < width (shouldn’t, but guard) or
+        // buffer limit smaller than expected due to cropping. Clamp row copy size.
+        final int rowBytes = Math.min(width, srcStride);
+        final int requiredBytes = (height - 1) * srcStride + rowBytes;
+
+        int available = src.capacity();
+        // Use duplicate to ignore current position/limit.
         for (int row = 0; row < height; row++) {
-            int rowStart = row * srcStride;
-            srcDup.position(rowStart);
-            srcDup.limit(rowStart + rowBytes);
-            dst.put(srcDup);
+            int srcPos = row * srcStride;
+            int end = srcPos + rowBytes;
+            if (end > available) {
+                // Abort on unexpected short buffer to avoid IllegalArgumentException.
+                Log.w(TAG, "copyPlaneSafe(" + label + ") abort: row=" + row +
+                        " srcPos=" + srcPos + " end=" + end + " cap=" + available);
+                break;
+            }
+            ByteBuffer rowBuf = src.duplicate();
+            // Ensure full visibility (some buffers come with non-zero position/limit)
+            rowBuf.position(0);
+            rowBuf.limit(available);
+            rowBuf.position(srcPos);
+            rowBuf.limit(end);
+            dst.put(rowBuf);
+        }
+
+        int written = rowBytes * height;
+        if (written < width * height && "Y".equals(label)) {
+            Log.w(TAG, "copyPlaneSafe: wrote fewer luma bytes than expected (" +
+                    written + " < " + (width * height) + ")");
         }
     }
 
