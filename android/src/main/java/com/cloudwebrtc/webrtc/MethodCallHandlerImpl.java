@@ -43,6 +43,7 @@ import com.cloudwebrtc.webrtc.video.camera.Point;
 import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
 import com.twilio.audioswitch.AudioDevice;
 
+import com.cloudwebrtc.webrtc.record.RawFrameCapturer;
 import org.webrtc.AudioTrack;
 import org.webrtc.CryptoOptions;
 import org.webrtc.DtmfSender;
@@ -110,6 +111,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   private final Map<String, MediaStream> localStreams = new HashMap<>();
   private final Map<String, LocalTrack> localTracks = new HashMap<>();
   private final LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
+  private final Map<String, RawFrameCapturer> rawFrameCapturers = new HashMap<>();
 
   public RecordSamplesReadyCallbackAdapter recordSamplesReadyCallbackAdapter;
 
@@ -143,6 +145,10 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       params.putString("data", message);
       FlutterWebRTCPlugin.sharedSingleton.sendEvent(params.toMap());
     }
+  }
+
+  private static String makeKey(String peerConnectionId, String trackId) {
+    return (peerConnectionId == null ? "" : peerConnectionId) + ":" + (trackId == null ? "" : trackId);
   }
 
   public static LogSink logSink = new LogSink();
@@ -816,43 +822,45 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String videoTrackId = call.argument("trackId");
         String peerConnectionId = call.argument("peerConnectionId");
         Log.w(TAG, "startFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
-        // if (videoTrackId == null) {
-        //   resultError("startFrameCapture", "Missing 'trackId'", new AnyThreadResult(notSafeResult));
-        //   break;
-        // }
-        // MediaStreamTrack track = getTrackForId(videoTrackId, peerConnectionId);
-        // if (!(track instanceof VideoTrack)) {
-        //   resultError("startFrameCapture", "It's not a video track", new AnyThreadResult(notSafeResult));
-        //   break;
-        // }
 
-        // String key = makeKey(peerConnectionId, videoTrackId);
-        // RawFrameCapturer existing = rawFrameCapturers.remove(key);
-        // if (existing != null) {
-        //   existing.stop();
-        // }
+        if (videoTrackId == null) {
+          resultError("startFrameCapture", "Missing 'trackId'", result);
+          break;
+        }
+        MediaStreamTrack track = getTrackForId(videoTrackId, peerConnectionId);
+        if (!(track instanceof VideoTrack)) {
+          resultError("startFrameCapture", "It's not a video track", result);
+          break;
+        }
 
-        // RawFrameCapturer capturer = new RawFrameCapturer((VideoTrack) track);
-        // rawFrameCapturers.put(key, capturer);
-        // notSafeResult.success(null);
+        String key = makeKey(peerConnectionId, videoTrackId);
+        RawFrameCapturer existing = rawFrameCapturers.remove(key);
+        if (existing != null) {
+          existing.stop();
+        }
+
+        RawFrameCapturer capturer = new RawFrameCapturer((VideoTrack) track);
+        rawFrameCapturers.put(key, capturer);
+        result.success(null);
         break;
       }
       case "stopFrameCapture": {
         String videoTrackId = call.argument("trackId");
         String peerConnectionId = call.argument("peerConnectionId");
         Log.w(TAG, "stopFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
-        // if (videoTrackId == null) {
-        //   resultError("stopFrameCapture", "Missing 'trackId'", new AnyThreadResult(notSafeResult));
-        //   break;
-        // }
-        // String key = makeKey(peerConnectionId, videoTrackId);
-        // RawFrameCapturer capturer = rawFrameCapturers.remove(key);
-        // if (capturer != null) {
-        //   capturer.stop();
-        //   notSafeResult.success(null);
-        // } else {
-        //   resultError("stopFrameCapture", "No active capturer for the given trackId/peerConnectionId", new AnyThreadResult(notSafeResult));
-        // }
+
+        if (videoTrackId == null) {
+          resultError("stopFrameCapture", "Missing 'trackId'", result);
+          break;
+        }
+        String key = makeKey(peerConnectionId, videoTrackId);
+        RawFrameCapturer capturer = rawFrameCapturers.remove(key);
+        if (capturer != null) {
+          capturer.stop();
+          result.success(null);
+        } else {
+          resultError("stopFrameCapture", "No active capturer for the given trackId/peerConnectionId", result);
+        }
         break;
       }
       case "getLocalDescription": {
