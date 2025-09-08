@@ -180,47 +180,70 @@ public class RawFrameCapturer implements VideoSink {
         final int chromaW = (width + 1) / 2;
         final int chromaH = (height + 1) / 2;
 
-        copyPlaneSafe(i420.getDataY(), i420.getStrideY(), width, height, out, "Y");
-        copyPlaneSafe(i420.getDataU(), i420.getStrideU(), chromaW, chromaH, out, "U");
-        copyPlaneSafe(i420.getDataV(), i420.getStrideV(), chromaW, chromaH, out, "V");
+        copyPlaneAbs(i420.getDataY(), i420.getStrideY(), width, height, out, "Y");
+        copyPlaneAbs(i420.getDataU(), i420.getStrideU(), chromaW, chromaH, out, "U");
+        copyPlaneAbs(i420.getDataV(), i420.getStrideV(), chromaW, chromaH, out, "V");
         out.flip();
     }
 
-    private static void copyPlaneSafe(ByteBuffer src,
-                                      int srcStride,
-                                      int width,
-                                      int height,
-                                      ByteBuffer dst,
-                                      String label) {
-        // Some implementations may have srcStride < width (shouldn’t, but guard) or
-        // buffer limit smaller than expected due to cropping. Clamp row copy size.
-        final int rowBytes = Math.min(width, srcStride);
-        final int requiredBytes = (height - 1) * srcStride + rowBytes;
+    private static void copyPlaneAbs(ByteBuffer src,
+                                     int stride,
+                                     int planeWidth,
+                                     int planeHeight,
+                                     ByteBuffer dst,
+                                     String label) {
 
-        int available = src.capacity();
-        // Use duplicate to ignore current position/limit.
-        for (int row = 0; row < height; row++) {
-            int srcPos = row * srcStride;
-            int end = srcPos + rowBytes;
-            if (end > available) {
-                // Abort on unexpected short buffer to avoid IllegalArgumentException.
-                Log.w(TAG, "copyPlaneSafe(" + label + ") abort: row=" + row +
-                        " srcPos=" + srcPos + " end=" + end + " cap=" + available);
-                break;
-            }
-            ByteBuffer rowBuf = src.duplicate();
-            // Ensure full visibility (some buffers come with non-zero position/limit)
-            rowBuf.position(0);
-            rowBuf.limit(available);
-            rowBuf.position(srcPos);
-            rowBuf.limit(end);
-            dst.put(rowBuf);
+        final int cap = src.capacity();
+        if (cap <= 0) {
+            Log.w(TAG, "copyPlaneAbs(" + label + ") empty capacity");
+            // Pad plane with zeros.
+            int expected = planeWidth * planeHeight;
+            for (int i = 0; i < expected; i++) dst.put((byte) 0);
+            return;
         }
 
-        int written = rowBytes * height;
-        if (written < width * height && "Y".equals(label)) {
-            Log.w(TAG, "copyPlaneSafe: wrote fewer luma bytes than expected (" +
-                    written + " < " + (width * height) + ")");
+        // Log diagnostics once per plane size (optional – can be removed later).
+        if (planeWidth * planeHeight > 0 && cap < stride * planeHeight) {
+            Log.d(TAG, "copyPlaneAbs(" + label + "): cap=" + cap +
+                    " stride=" + stride +
+                    " planeW=" + planeWidth +
+                    " planeH=" + planeHeight +
+                    " (cap < stride*height=" + (stride * planeHeight) + ")");
+        }
+
+        final int copyCols = Math.min(stride, planeWidth); // what we can actually read per row
+
+        for (int row = 0; row < planeHeight; row++) {
+            int rowStart = row * stride;
+            if (rowStart >= cap) {
+                Log.w(TAG, "copyPlaneAbs(" + label + ") break: rowStart(" + rowStart + ") >= cap(" + cap + ") row=" + row);
+                // Pad remaining rows with zeros
+                int remainingRows = planeHeight - row;
+                int pad = remainingRows * planeWidth;
+                for (int i = 0; i < pad; i++) dst.put((byte) 0);
+                return;
+            }
+
+            int available = cap - rowStart;
+            int toCopy = Math.min(copyCols, available);
+            if (toCopy <= 0) {
+                Log.w(TAG, "copyPlaneAbs(" + label + ") toCopy<=0 at row " + row);
+                int remainingRows = planeHeight - row;
+                int pad = remainingRows * planeWidth;
+                for (int i = 0; i < pad; i++) dst.put((byte) 0);
+                return;
+            }
+
+            // Absolute per-byte copy (avoids manipulating src position/limit)
+            for (int x = 0; x < toCopy; x++) {
+                dst.put(src.get(rowStart + x));
+            }
+
+            // Pad if stride (or available data) < planeWidth
+            if (toCopy < planeWidth) {
+                int pad = planeWidth - toCopy;
+                for (int p = 0; p < pad; p++) dst.put((byte) 0);
+            }
         }
     }
 
