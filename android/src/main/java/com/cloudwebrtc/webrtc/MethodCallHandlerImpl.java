@@ -816,16 +816,14 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String videoTrackId = call.argument("trackId");
         String peerConnectionId = call.argument("peerConnectionId");
         Log.w(TAG, "startFrameCapture");
-
         // if (videoTrackId == null) {
-        //   resultError("startFrameCapture", "Missing 'trackId'", result);
-        //   return;
+        //   resultError("startFrameCapture", "Missing 'trackId'", new AnyThreadResult(notSafeResult));
+        //   break;
         // }
-
         // MediaStreamTrack track = getTrackForId(videoTrackId, peerConnectionId);
         // if (!(track instanceof VideoTrack)) {
-        //   resultError("startFrameCapture", "It's not a video track", result);
-        //   return;
+        //   resultError("startFrameCapture", "It's not a video track", new AnyThreadResult(notSafeResult));
+        //   break;
         // }
 
         // String key = makeKey(peerConnectionId, videoTrackId);
@@ -836,7 +834,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
         // RawFrameCapturer capturer = new RawFrameCapturer((VideoTrack) track);
         // rawFrameCapturers.put(key, capturer);
-        // result.success(null);
+        // notSafeResult.success(null);
         break;
       }
       case "stopFrameCapture": {
@@ -844,17 +842,16 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String peerConnectionId = call.argument("peerConnectionId");
         Log.w(TAG, "stopFrameCapture");
         // if (videoTrackId == null) {
-        //   resultError("stopFrameCapture", "Missing 'trackId'", result);
-        //   return;
+        //   resultError("stopFrameCapture", "Missing 'trackId'", new AnyThreadResult(notSafeResult));
+        //   break;
         // }
-
         // String key = makeKey(peerConnectionId, videoTrackId);
         // RawFrameCapturer capturer = rawFrameCapturers.remove(key);
         // if (capturer != null) {
         //   capturer.stop();
-        //   result.success(null);
+        //   notSafeResult.success(null);
         // } else {
-        //   resultError("stopFrameCapture", "No active capturer for the given trackId/peerConnectionId", result);
+        //   resultError("stopFrameCapture", "No active capturer for the given trackId/peerConnectionId", new AnyThreadResult(notSafeResult));
         // }
         break;
       }
