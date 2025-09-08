@@ -49,6 +49,13 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_1_8
     }
+
+    externalNativeBuild{
+        cmake{
+            version "3.31.0"
+            path "CMakeLists.txt"
+        }
+    }
 }
 
 dependencies {
