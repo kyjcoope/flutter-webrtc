@@ -815,7 +815,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       case "startFrameCapture": {
         String videoTrackId = call.argument("trackId");
         String peerConnectionId = call.argument("peerConnectionId");
-        Log.w(TAG, "startFrameCapture");
+        Log.w(TAG, "startFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
         // if (videoTrackId == null) {
         //   resultError("startFrameCapture", "Missing 'trackId'", new AnyThreadResult(notSafeResult));
         //   break;
@@ -840,7 +840,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       case "stopFrameCapture": {
         String videoTrackId = call.argument("trackId");
         String peerConnectionId = call.argument("peerConnectionId");
-        Log.w(TAG, "stopFrameCapture");
+        Log.w(TAG, "stopFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
         // if (videoTrackId == null) {
         //   resultError("stopFrameCapture", "Missing 'trackId'", new AnyThreadResult(notSafeResult));
         //   break;
