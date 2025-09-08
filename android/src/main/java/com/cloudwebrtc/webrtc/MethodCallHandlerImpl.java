@@ -812,6 +812,52 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         }
         break;
       }
+      case "startFrameCapture": {
+        String videoTrackId = call.argument("trackId");
+        String peerConnectionId = call.argument("peerConnectionId");
+        Log.w(TAG, "startFrameCapture");
+
+        // if (videoTrackId == null) {
+        //   resultError("startFrameCapture", "Missing 'trackId'", result);
+        //   return;
+        // }
+
+        // MediaStreamTrack track = getTrackForId(videoTrackId, peerConnectionId);
+        // if (!(track instanceof VideoTrack)) {
+        //   resultError("startFrameCapture", "It's not a video track", result);
+        //   return;
+        // }
+
+        // String key = makeKey(peerConnectionId, videoTrackId);
+        // RawFrameCapturer existing = rawFrameCapturers.remove(key);
+        // if (existing != null) {
+        //   existing.stop();
+        // }
+
+        // RawFrameCapturer capturer = new RawFrameCapturer((VideoTrack) track);
+        // rawFrameCapturers.put(key, capturer);
+        // result.success(null);
+        break;
+      }
+      case "stopFrameCapture": {
+        String videoTrackId = call.argument("trackId");
+        String peerConnectionId = call.argument("peerConnectionId");
+        Log.w(TAG, "stopFrameCapture");
+        // if (videoTrackId == null) {
+        //   resultError("stopFrameCapture", "Missing 'trackId'", result);
+        //   return;
+        // }
+
+        // String key = makeKey(peerConnectionId, videoTrackId);
+        // RawFrameCapturer capturer = rawFrameCapturers.remove(key);
+        // if (capturer != null) {
+        //   capturer.stop();
+        //   result.success(null);
+        // } else {
+        //   resultError("stopFrameCapture", "No active capturer for the given trackId/peerConnectionId", result);
+        // }
+        break;
+      }
       case "getLocalDescription": {
         String peerConnectionId = call.argument("peerConnectionId");
         PeerConnection peerConnection = getPeerConnection(peerConnectionId);
