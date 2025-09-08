@@ -126,14 +126,6 @@ public class RawFrameCapturer implements VideoSink {
                         PIXEL_TYPE_I420
                 );
 
-                Log.d(TAG, "pushFrame #" + frameCounter +
-                        " seq=" + seq +
-                        " track=" + trackId +
-                        " size=" + width + "x" + height +
-                        " rot=" + rotation +
-                        " tsMs=" + tsMs +
-                        " bytes=" + packedSize);
-
             } catch (Exception e) {
                 Log.e(TAG, "Error packing/pushing frame: " + e.getMessage(), e);
             } finally {
@@ -204,11 +196,6 @@ public class RawFrameCapturer implements VideoSink {
 
         // Log diagnostics once per plane size (optional – can be removed later).
         if (planeWidth * planeHeight > 0 && cap < stride * planeHeight) {
-            Log.d(TAG, "copyPlaneAbs(" + label + "): cap=" + cap +
-                    " stride=" + stride +
-                    " planeW=" + planeWidth +
-                    " planeH=" + planeHeight +
-                    " (cap < stride*height=" + (stride * planeHeight) + ")");
         }
 
         final int copyCols = Math.min(stride, planeWidth); // what we can actually read per row
@@ -216,7 +203,6 @@ public class RawFrameCapturer implements VideoSink {
         for (int row = 0; row < planeHeight; row++) {
             int rowStart = row * stride;
             if (rowStart >= cap) {
-                Log.w(TAG, "copyPlaneAbs(" + label + ") break: rowStart(" + rowStart + ") >= cap(" + cap + ") row=" + row);
                 // Pad remaining rows with zeros
                 int remainingRows = planeHeight - row;
                 int pad = remainingRows * planeWidth;
@@ -227,7 +213,6 @@ public class RawFrameCapturer implements VideoSink {
             int available = cap - rowStart;
             int toCopy = Math.min(copyCols, available);
             if (toCopy <= 0) {
-                Log.w(TAG, "copyPlaneAbs(" + label + ") toCopy<=0 at row " + row);
                 int remainingRows = planeHeight - row;
                 int pad = remainingRows * planeWidth;
                 for (int i = 0; i < pad; i++) dst.put((byte) 0);
