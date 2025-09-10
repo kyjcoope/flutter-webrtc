@@ -125,6 +125,7 @@ public class RawFrameCapturer implements VideoSink {
                         FRAME_TYPE_RAW,
                         PIXEL_TYPE_I420
                 );
+                Log.d(TAG, "Push frame: " + seq);
 
             } catch (Exception e) {
                 Log.e(TAG, "Error packing/pushing frame: " + e.getMessage(), e);
