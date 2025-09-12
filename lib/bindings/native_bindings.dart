@@ -58,12 +58,12 @@ final _popNative = _nativeLib
     .lookup<ffi.NativeFunction<_PopNative>>("popNativeBufferFFI")
     .asFunction<_PopNative>();
 
-class RawVideoFrameStream {
-  factory RawVideoFrameStream() => _instance;
-  RawVideoFrameStream._internal() {
+class WebRTCFrameStreamer {
+  factory WebRTCFrameStreamer() => _instance;
+  WebRTCFrameStreamer._internal() {
     _ensureDartApiInitialized();
   }
-  static final RawVideoFrameStream _instance = RawVideoFrameStream._internal();
+  static final WebRTCFrameStreamer _instance = WebRTCFrameStreamer._internal();
 
   final Map<String, StreamController<RawPixelFrame>> _controllers = {};
   final Map<String, ReceivePort> _ports = {};
