@@ -43,7 +43,7 @@ import com.cloudwebrtc.webrtc.video.camera.Point;
 import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
 import com.twilio.audioswitch.AudioDevice;
 
-import com.cloudwebrtc.webrtc.record.RawFrameCapturer;
+import com.cloudwebrtc.webrtc.record.FrameStreamer;
 import org.webrtc.AudioTrack;
 import org.webrtc.CryptoOptions;
 import org.webrtc.DtmfSender;
@@ -111,7 +111,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   private final Map<String, MediaStream> localStreams = new HashMap<>();
   private final Map<String, LocalTrack> localTracks = new HashMap<>();
   private final LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
-  private final Map<String, RawFrameCapturer> rawFrameCapturers = new HashMap<>();
+  private final Map<String, FrameStreamer> frameStreamers = new HashMap<>();
 
   public RecordSamplesReadyCallbackAdapter recordSamplesReadyCallbackAdapter;
 
@@ -578,8 +578,16 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       }
       case "trackDispose": {
         String trackId = call.argument("trackId");
-        trackDispose(trackId);
-        result.success(null);
+        if (trackId != null) {
+          String removeKey = null;
+            for (String k : frameStreamers.keySet()) {
+              if (k.endsWith(":" + trackId)) { removeKey = k; break; }
+            }
+          if (removeKey != null) {
+            FrameStreamer s = frameStreamers.remove(removeKey);
+            if (s != null) s.stop();
+          }
+        }
         break;
       }
       case "restartIce": {
@@ -818,48 +826,40 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         }
         break;
       }
-      case "startFrameCapture": {
+      case "startFrameStream": {
         String videoTrackId = call.argument("trackId");
         String peerConnectionId = call.argument("peerConnectionId");
-        Log.w(TAG, "startFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
-
         if (videoTrackId == null) {
-          resultError("startFrameCapture", "Missing 'trackId'", result);
+          resultError("startFrameStream", "Missing 'trackId'", result);
           break;
         }
         MediaStreamTrack track = getTrackForId(videoTrackId, peerConnectionId);
         if (!(track instanceof VideoTrack)) {
-          resultError("startFrameCapture", "It's not a video track", result);
+          resultError("startFrameStream", "It's not a video track", result);
           break;
         }
-
         String key = makeKey(peerConnectionId, videoTrackId);
-        RawFrameCapturer existing = rawFrameCapturers.remove(key);
-        if (existing != null) {
-          existing.stop();
-        }
-
-        RawFrameCapturer capturer = new RawFrameCapturer((VideoTrack) track);
-        rawFrameCapturers.put(key, capturer);
+        FrameStreamer existing = frameStreamers.remove(key);
+        if (existing != null) existing.stop();
+        FrameStreamer streamer = new FrameStreamer((VideoTrack) track);
+        frameStreamers.put(key, streamer);
         result.success(null);
         break;
       }
-      case "stopFrameCapture": {
+      case "stopFrameStream": {
         String videoTrackId = call.argument("trackId");
         String peerConnectionId = call.argument("peerConnectionId");
-        Log.w(TAG, "stopFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
-
         if (videoTrackId == null) {
-          resultError("stopFrameCapture", "Missing 'trackId'", result);
+          resultError("stopFrameStream", "Missing 'trackId'", result);
           break;
         }
         String key = makeKey(peerConnectionId, videoTrackId);
-        RawFrameCapturer capturer = rawFrameCapturers.remove(key);
-        if (capturer != null) {
-          capturer.stop();
+        FrameStreamer streamer = frameStreamers.remove(key);
+        if (streamer != null) {
+          streamer.stop();
           result.success(null);
         } else {
-          resultError("stopFrameCapture", "No active capturer for the given trackId/peerConnectionId", result);
+          resultError("stopFrameStream", "No active streamer", result);
         }
         break;
       }

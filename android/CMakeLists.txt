@@ -8,8 +8,7 @@ set(CMAKE_C_STANDARD_REQUIRED true)
 add_library(native_lib SHARED
     ${CMAKE_SOURCE_DIR}/src/main/cpp/NativeBuffer.cpp
     ${CMAKE_SOURCE_DIR}/src/main/cpp/native_buffer_api.cpp
-    ${CMAKE_SOURCE_DIR}/src/main/cpp/VideoDecoderBypassJNI.cpp
-    ${CMAKE_SOURCE_DIR}/src/main/cpp/AudioBufferUtilJNI.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/cpp/NativeBufferJNI.cpp
     ${CMAKE_SOURCE_DIR}/src/main/cpp/dart_api_dl.c
 )
 

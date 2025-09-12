@@ -11,18 +11,18 @@ abstract class AudioControl {
 
 // Add helpers to call native-only methods when available
 extension MediaStreamTrackCaptureExt on MediaStreamTrack {
-  Future<void> startFrameCapture() async {
+  Future<void> startFrameStream() async {
     final t = this;
     if (t is MediaStreamTrackNative) {
-      return t.startFrameCapture();
+      return t.startFrameStream();
     }
     return Future.value();
   }
 
-  Future<void> stopFrameCapture() async {
+  Future<void> stopFrameStream() async {
     final t = this;
     if (t is MediaStreamTrackNative) {
-      return t.stopFrameCapture();
+      return t.stopFrameStream();
     }
     return Future.value();
   }
