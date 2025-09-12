@@ -13,24 +13,23 @@ Java_com_cloudwebrtc_webrtc_record_FrameStreamer_initNativeBuffer(
     return (jint)result;
 }
 
-JNIEXPORT jlong JNICALL
+JNIEXPORT jint JNICALL
 Java_com_cloudwebrtc_webrtc_record_FrameStreamer_pushFrame(
-        JNIEnv* env, jclass, jstring jTrackId, jobject buffer,
+        JNIEnv* env, jclass, jstring jTrackId, jobject buffer, jint dataSize,
         jint width, jint height, jlong frameTime,
         jint rotation, jint colorFormat) {
     const char* key = env->GetStringUTFChars(jTrackId, nullptr);
-    if (!key) return 0LL;
+    if (!key) return 0;
     auto* base = reinterpret_cast<uint8_t*>(env->GetDirectBufferAddress(buffer));
-    jlong cap = env->GetDirectBufferCapacity(buffer);
-    if (!base || cap <= 0) {
+    if (!base || dataSize <= 0) {
         env->ReleaseStringUTFChars(jTrackId, key);
-        return 0LL;
+        return 0;
     }
-    int ok = pushRawVideoFrameFFI(key, base, (size_t)cap,
+    int ok = pushRawVideoFrameFFI(key, base, (size_t)dataSize,
                                   width, height, (uint64_t)frameTime,
                                   rotation, colorFormat);
     env->ReleaseStringUTFChars(jTrackId, key);
-    return (jlong)ok;
+    return (jint)ok;
 }
 
 JNIEXPORT void JNICALL

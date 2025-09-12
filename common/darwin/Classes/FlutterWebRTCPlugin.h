@@ -68,6 +68,12 @@ typedef void (^CapturerStopHandler)(CompletionHandler _Nonnull handler);
 
 @property(nonatomic, strong) AudioManager* _Nullable audioManager;
 
+#if TARGET_OS_IPHONE
+// Holds active video frame streamers keyed by "<peerConnectionId>:<trackId>"
+@property(nonatomic, strong)
+    NSMutableDictionary<NSString*, id>* _Nullable frameStreamers;
+#endif
+
 - (RTCMediaStream* _Nullable)streamForId:(NSString* _Nonnull)streamId
                         peerConnectionId:(NSString* _Nullable)peerConnectionId;
 - (RTCMediaStreamTrack* _Nullable)trackForId:(NSString* _Nonnull)trackId

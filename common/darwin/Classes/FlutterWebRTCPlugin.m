@@ -22,6 +22,9 @@
 #import <WebRTC/RTCCallbackLogger.h>
 
 #import "LocalTrack.h"
+#if TARGET_OS_IPHONE
+#import "FrameStreamer.h"
+#endif
 #import "LocalAudioTrack.h"
 #import "LocalVideoTrack.h"
 
@@ -171,6 +174,10 @@ static FlutterWebRTCPlugin *sharedSingleton;
     _speakerOnButPreferBluetooth = NO;
     _eventChannel = eventChannel;
     _audioManager = AudioManager.sharedInstance;
+    
+#if TARGET_OS_IPHONE
+  self.frameStreamers = [NSMutableDictionary new];
+#endif
 
 #if TARGET_OS_IPHONE
     _preferredInput = AVAudioSessionPortHeadphones;
@@ -478,6 +485,53 @@ static FlutterWebRTCPlugin *sharedSingleton;
                                    details:nil]);
       }
     }
+  } else if ([@"startFrameStream" isEqualToString:call.method]) {
+#if TARGET_OS_IPHONE
+    NSDictionary* argsMap = call.arguments;
+    NSString* trackId = argsMap[@"trackId"];
+    NSString* peerConnectionId = argsMap[@"peerConnectionId"];
+    RTCMediaStreamTrack* track = [self trackForId:trackId peerConnectionId:peerConnectionId];
+    if (track != nil && [track isKindOfClass:[RTCVideoTrack class]]) {
+      RTCVideoTrack* videoTrack = (RTCVideoTrack*)track;
+      NSString* key = [NSString stringWithFormat:@"%@@%@", peerConnectionId ?: @"", trackId ?: @""];
+      FrameStreamer* existing = (FrameStreamer*)self.frameStreamers[key];
+      if (existing) {
+        [existing stop];
+      }
+      FrameStreamer* streamer = [[FrameStreamer alloc] initWithTrack:videoTrack];
+      self.frameStreamers[key] = streamer;
+      result(nil);
+    } else {
+      if (track == nil) {
+        result([FlutterError errorWithCode:@"Track is nil" message:nil details:nil]);
+      } else {
+        result([FlutterError errorWithCode:[@"Track is class of " stringByAppendingString:[[track class] description]]
+                                   message:nil
+                                   details:nil]);
+      }
+    }
+#else
+    result([FlutterError errorWithCode:@"Unsupported"
+                               message:@"startFrameStream is only supported on iOS in this build"
+                               details:nil]);
+#endif
+  } else if ([@"stopFrameStream" isEqualToString:call.method]) {
+#if TARGET_OS_IPHONE
+    NSDictionary* argsMap = call.arguments;
+    NSString* trackId = argsMap[@"trackId"];
+    NSString* peerConnectionId = argsMap[@"peerConnectionId"];
+    NSString* key = [NSString stringWithFormat:@"%@@%@", peerConnectionId ?: @"", trackId ?: @""];
+    FrameStreamer* streamer = (FrameStreamer*)self.frameStreamers[key];
+    if (streamer) {
+      [streamer stop];
+      [self.frameStreamers removeObjectForKey:key];
+    }
+    result(nil);
+#else
+  result([FlutterError errorWithCode:@"Unsupported"
+                 message:@"stopFrameStream is only supported on iOS in this build"
+                               details:nil]);
+#endif
   } else if ([@"setLocalDescription" isEqualToString:call.method]) {
     NSDictionary* argsMap = call.arguments;
     NSString* peerConnectionId = argsMap[@"peerConnectionId"];
@@ -758,6 +812,22 @@ static FlutterWebRTCPlugin *sharedSingleton;
     if(renderer != nil) {
       renderer.videoTrack = nil;
     }
+#if TARGET_OS_IPHONE
+    // Stop any active FrameStreamer associated with this track
+    if (self.frameStreamers.count > 0) {
+      NSMutableArray<NSString*>* toRemove = [NSMutableArray new];
+      [self.frameStreamers enumerateKeysAndObjectsUsingBlock:^(NSString* key, id obj, BOOL *stop) {
+        if ([key hasSuffix:[@"@" stringByAppendingString:trackId ?: @""]]) {
+          FrameStreamer* streamer = (FrameStreamer*)obj;
+          [streamer stop];
+          [toRemove addObject:key];
+        }
+      }];
+      for (NSString* k in toRemove) {
+        [self.frameStreamers removeObjectForKey:k];
+      }
+    }
+#endif
     result(nil);
   } else if ([@"restartIce" isEqualToString:call.method]) {
     NSDictionary* argsMap = call.arguments;

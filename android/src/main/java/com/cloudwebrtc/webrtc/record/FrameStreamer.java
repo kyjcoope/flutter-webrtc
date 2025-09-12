@@ -19,13 +19,14 @@ public class FrameStreamer implements VideoSink {
     private static final int COLOR_FORMAT_I420 = 1;
 
     private static native int initNativeBuffer(String trackId, int capacity, int bufferSize);
-    private static native long pushFrame(String trackId,
-                                         ByteBuffer buffer,
-                                         int width,
-                                         int height,
-                                         long frameTimeMs,
-                                         int rotation,
-                                         int colorFormat);
+    private static native int pushFrame(String trackId,
+                                        ByteBuffer buffer,
+                                        int dataSize,
+                                        int width,
+                                        int height,
+                                        long frameTimeMs,
+                                        int rotation,
+                                        int colorFormat);
     private static native void freeNativeBuffer(String trackId);
 
     private final VideoTrack videoTrack;
@@ -92,7 +93,7 @@ public class FrameStreamer implements VideoSink {
                 long tsMs = frame.getTimestampNs() / 1_000_000L;
                 int rot = frame.getRotation();
 
-                long ok = pushFrame(trackId, reusableBuffer, w, h, tsMs, rot, COLOR_FORMAT_I420);
+                int ok = pushFrame(trackId, reusableBuffer, size, w, h, tsMs, rot, COLOR_FORMAT_I420);
                 frameCounter++;
                 if (ok == 0) {
                     Log.w(TAG, "pushFrame failed for #" + frameCounter);

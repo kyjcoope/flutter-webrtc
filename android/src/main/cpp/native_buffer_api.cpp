@@ -7,6 +7,20 @@
 #include <memory>
 #include <atomic>
 
+// Plain struct layout expected by Dart's MediaFrameNative
+struct MediaFramePlain {
+    uint64_t frameTime;
+    const uint8_t* buffer;
+    uint64_t bufferSize;
+    uint64_t bufferCapacity;
+    int32_t width;
+    int32_t height;
+    int32_t rotation;
+    int32_t colorFormat;
+};
+
+static thread_local MediaFramePlain g_plainFrame;
+
 static std::unordered_map<std::string, std::unique_ptr<NativeBuffer>> g_buffers;
 static std::mutex g_buffers_mutex;
 
@@ -80,7 +94,16 @@ FFI_PLUGIN_EXPORT uintptr_t popNativeBufferFFI(const char* key) {
         target = it->second.get();
     }
     MediaFrame* frame = target->popFrame();
-    return reinterpret_cast<uintptr_t>(frame);
+    if (!frame) return 0;
+    g_plainFrame.frameTime = frame->frameTime;
+    g_plainFrame.buffer = frame->buffer.get();
+    g_plainFrame.bufferSize = static_cast<uint64_t>(frame->bufferSize);
+    g_plainFrame.bufferCapacity = static_cast<uint64_t>(frame->bufferCapacity);
+    g_plainFrame.width = frame->width;
+    g_plainFrame.height = frame->height;
+    g_plainFrame.rotation = frame->rotation;
+    g_plainFrame.colorFormat = frame->colorFormat;
+    return reinterpret_cast<uintptr_t>(&g_plainFrame);
 }
 
 FFI_PLUGIN_EXPORT void freeNativeBufferFFI(const char* key) {
