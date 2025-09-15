@@ -56,6 +56,27 @@ static const int kColorFormatI420 = 1;
 - (void)renderFrame:(RTC_OBJC_TYPE(RTCVideoFrame) *)frame {
   if (!frame) return;
 
+  // ===== Debug: print source pixel format (once per change) =====
+  // Simplified: just log the raw pixel format value (every frame) without mapping.
+#if __has_include(<WebRTC/RTCCVPixelBuffer.h>)
+  id<RTCVideoFrameBuffer> srcBuf = frame.buffer;
+  if ([srcBuf isKindOfClass:RTCCVPixelBuffer.class]) {
+    RTCCVPixelBuffer *cvb = (RTCCVPixelBuffer *)srcBuf;
+    CVPixelBufferRef pb = cvb.pixelBuffer;
+    OSType pf = CVPixelBufferGetPixelFormatType(pb);
+    NSLog(@"[FrameStreamer] PixelFormat raw=0x%08X chars='%c%c%c%c'", (unsigned)pf,
+          (char)((pf >> 24) & 0xFF), (char)((pf >> 16) & 0xFF),
+          (char)((pf >> 8) & 0xFF), (char)(pf & 0xFF));
+  } else if ([srcBuf conformsToProtocol:@protocol(RTCI420Buffer)]) {
+    NSLog(@"[FrameStreamer] PixelFormat=I420 (software)");
+  } else {
+    NSLog(@"[FrameStreamer] PixelFormat=Unknown buffer type");
+  }
+#else
+  NSLog(@"[FrameStreamer] PixelFormat=(RTCCVPixelBuffer not available)");
+#endif
+  // ===== End debug pixel format logging =====
+
   id<RTCI420Buffer> i420 = [[frame buffer] toI420];
   if (!i420) return;
 
