@@ -12,6 +12,8 @@ import android.media.MediaRecorder;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.view.Surface;
@@ -43,7 +45,6 @@ import com.cloudwebrtc.webrtc.video.camera.Point;
 import com.cloudwebrtc.webrtc.video.LocalVideoTrack;
 import com.twilio.audioswitch.AudioDevice;
 
-import com.cloudwebrtc.webrtc.record.RawFrameCapturer;
 import org.webrtc.AudioTrack;
 import org.webrtc.CryptoOptions;
 import org.webrtc.DtmfSender;
@@ -91,6 +92,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.EventChannel;
@@ -111,7 +114,6 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   private final Map<String, MediaStream> localStreams = new HashMap<>();
   private final Map<String, LocalTrack> localTracks = new HashMap<>();
   private final LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
-  private final Map<String, RawFrameCapturer> rawFrameCapturers = new HashMap<>();
 
   public RecordSamplesReadyCallbackAdapter recordSamplesReadyCallbackAdapter;
 
@@ -125,9 +127,11 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   private CameraUtils cameraUtils;
 
-  private AudioDeviceModule audioDeviceModule;
+  private JavaAudioDeviceModule audioDeviceModule;
 
   private FlutterRTCFrameCryptor frameCryptor;
+
+  private FlutterDataPacketCryptor dataPacketCryptor;
 
   private Activity activity;
 
@@ -147,9 +151,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     }
   }
 
-  private static String makeKey(String peerConnectionId, String trackId) {
-    return (peerConnectionId == null ? "" : peerConnectionId) + ":" + (trackId == null ? "" : trackId);
-  }
+  ExecutorService executor = Executors.newSingleThreadExecutor();
+  Handler mainHandler = new Handler(Looper.getMainLooper());
 
   public static LogSink logSink = new LogSink();
 
@@ -197,6 +200,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     cameraUtils = new CameraUtils(getUserMediaImpl, activity);
 
     frameCryptor = new FlutterRTCFrameCryptor(this);
+
+    dataPacketCryptor = new FlutterDataPacketCryptor(frameCryptor);
 
     AudioAttributes audioAttributes = null;
     if (androidAudioConfiguration != null) {
@@ -818,51 +823,6 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         }
         break;
       }
-      case "startFrameCapture": {
-        String videoTrackId = call.argument("trackId");
-        String peerConnectionId = call.argument("peerConnectionId");
-        Log.w(TAG, "startFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
-
-        if (videoTrackId == null) {
-          resultError("startFrameCapture", "Missing 'trackId'", result);
-          break;
-        }
-        MediaStreamTrack track = getTrackForId(videoTrackId, peerConnectionId);
-        if (!(track instanceof VideoTrack)) {
-          resultError("startFrameCapture", "It's not a video track", result);
-          break;
-        }
-
-        String key = makeKey(peerConnectionId, videoTrackId);
-        RawFrameCapturer existing = rawFrameCapturers.remove(key);
-        if (existing != null) {
-          existing.stop();
-        }
-
-        RawFrameCapturer capturer = new RawFrameCapturer((VideoTrack) track);
-        rawFrameCapturers.put(key, capturer);
-        result.success(null);
-        break;
-      }
-      case "stopFrameCapture": {
-        String videoTrackId = call.argument("trackId");
-        String peerConnectionId = call.argument("peerConnectionId");
-        Log.w(TAG, "stopFrameCapture: " + videoTrackId + " on peerConnectionId: " + peerConnectionId);
-
-        if (videoTrackId == null) {
-          resultError("stopFrameCapture", "Missing 'trackId'", result);
-          break;
-        }
-        String key = makeKey(peerConnectionId, videoTrackId);
-        RawFrameCapturer capturer = rawFrameCapturers.remove(key);
-        if (capturer != null) {
-          capturer.stop();
-          result.success(null);
-        } else {
-          resultError("stopFrameCapture", "No active capturer for the given trackId/peerConnectionId", result);
-        }
-        break;
-      }
       case "getLocalDescription": {
         String peerConnectionId = call.argument("peerConnectionId");
         PeerConnection peerConnection = getPeerConnection(peerConnectionId);
@@ -1088,6 +1048,24 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         }
         break;
       }
+      case "startLocalRecording": {
+        executor.execute(() -> {
+          audioDeviceModule.prewarmRecording();
+          mainHandler.post(() -> {
+            result.success(null);
+          });
+        });
+        break;
+      }
+      case "stopLocalRecording": {
+        executor.execute(() -> {
+          audioDeviceModule.requestStopRecording();
+          mainHandler.post(() -> {
+            result.success(null);
+          });
+        });
+        break;
+      }
       case "setLogSeverity": {
         //now it's possible to setup logSeverity only via PeerConnectionFactory.initialize method
         //Log.d(TAG, "no implementation for 'setLogSeverity'");
@@ -1095,6 +1073,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       }
       default:
         if(frameCryptor.handleMethodCall(call, result)) {
+          break;
+        } else if(dataPacketCryptor.handleMethodCall(call, result)) {
           break;
         }
         result.notImplemented();
@@ -1645,7 +1625,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       ConstraintsMap audioOutputMap = new ConstraintsMap();
       audioOutputMap.putString("label", audioOutput.getName());
       audioOutputMap.putString("deviceId", AudioDeviceKind.fromAudioDevice(audioOutput).typeName);
-      audioOutputMap.putString("groupId", "" + AudioDeviceKind.fromAudioDevice(audioOutput).typeName);
+      audioOutputMap.putString("groupId", AudioDeviceKind.fromAudioDevice(audioOutput).typeName);
       audioOutputMap.putString("kind", "audiooutput");
       array.pushMap(audioOutputMap);
     }

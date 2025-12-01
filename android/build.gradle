@@ -49,17 +49,10 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_1_8
     }
-
-    externalNativeBuild{
-        cmake{
-            version "3.31.0"
-            path "CMakeLists.txt"
-        }
-    }
 }
 
 dependencies {
-    implementation 'io.github.webrtc-sdk:android:137.7151.03'
+    implementation 'io.github.webrtc-sdk:android:137.7151.04'
     implementation 'com.github.davidliu:audioswitch:89582c47c9a04c62f90aa5e57251af4800a62c9a'
     implementation 'androidx.annotation:annotation:1.1.0'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
