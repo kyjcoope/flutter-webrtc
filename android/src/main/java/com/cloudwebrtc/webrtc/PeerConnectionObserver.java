@@ -27,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
+import org.webrtc.video.CustomVideoDecoderFactory;
 import org.webrtc.AudioTrack;
 import org.webrtc.CandidatePairChangeEvent;
 import org.webrtc.DataChannel;
@@ -500,6 +501,8 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
 
       if ("audio".equals(track.kind())) {
         AudioSwitchManager.instance.start();
+      } else if ("video".equals(track.kind())) {
+        CustomVideoDecoderFactory.setTrackId(trackId);
       }
     }
 
