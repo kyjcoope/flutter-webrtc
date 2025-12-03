@@ -478,17 +478,24 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
   @Override
   public void onAddTrack(RtpReceiver receiver, MediaStream[] mediaStreams) {
     Log.d(TAG, "onAddTrack");
-    // for plan-b
+
+    // Common track reference for both plan-b style event and unified-plan event.
+    MediaStreamTrack track = receiver.track();
+    if (track == null) {
+      Log.w(TAG, "onAddTrack: receiver.track() is null");
+      return;
+    }
+    final String trackId = track.id();
+
+    // === Plan-B style "onAddTrack" per-stream event ===
     for (MediaStream stream : mediaStreams) {
       String streamId = stream.getId();
-      MediaStreamTrack track = receiver.track();
+
       ConstraintsMap params = new ConstraintsMap();
       params.putString("event", "onAddTrack");
       params.putString("streamId", streamId);
       params.putString("ownerTag", id);
-      params.putString("trackId", track.id());
-
-      String trackId = track.id();
+      params.putString("trackId", trackId);
       ConstraintsMap trackInfo = new ConstraintsMap();
       trackInfo.putString("id", trackId);
       trackInfo.putString("label", track.kind());
@@ -502,38 +509,47 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
       if ("audio".equals(track.kind())) {
         AudioSwitchManager.instance.start();
       } else if ("video".equals(track.kind())) {
-        CustomVideoDecoderFactory.setTrackId(trackId);
+        org.webrtc.video.CustomVideoDecoderFactory.setTrackId(trackId);
       }
     }
 
-    // For unified-plan
+    if (mediaStreams.length == 0 && "video".equals(track.kind())) {
+      Log.d(TAG, "onAddTrack: video track with no mediaStreams, id=" + trackId);
+      org.webrtc.video.CustomVideoDecoderFactory.setTrackId(trackId);
+    }
+
+    // === Unified-plan style "onTrack" event ===
     ConstraintsMap params = new ConstraintsMap();
     ConstraintsArray streams = new ConstraintsArray();
-    for (int i = 0; i < mediaStreams.length; i++) {
-      MediaStream stream = mediaStreams[i];
+
+    for (MediaStream stream : mediaStreams) {
       streams.pushMap(new ConstraintsMap(mediaStreamToMap(stream)));
     }
 
     params.putString("event", "onTrack");
     params.putArray("streams", streams.toArrayList());
-    params.putMap("track", mediaTrackToMap(receiver.track()));
+    params.putMap("track", mediaTrackToMap(track));
     params.putMap("receiver", rtpReceiverToMap(receiver));
 
     if (this.configuration.sdpSemantics == PeerConnection.SdpSemantics.UNIFIED_PLAN) {
       List<RtpTransceiver> transceivers = peerConnection.getTransceivers();
       for (RtpTransceiver transceiver : transceivers) {
-        if (transceiver.getReceiver() != null && receiver.id().equals(transceiver.getReceiver().id())) {
+        if (transceiver.getReceiver() != null &&
+            receiver.id().equals(transceiver.getReceiver().id())) {
+
           String transceiverId = transceiver.getMid();
-          if (null == transceiverId) {
+          if (transceiverId == null) {
             transceiverId = stateProvider.getNextStreamUUID();
-            this.transceivers.put(transceiverId,transceiver);
+            this.transceivers.put(transceiverId, transceiver);
           }
           params.putMap("transceiver", transceiverToMap(transceiverId, transceiver));
         }
       }
     }
+
     sendEvent(params);
   }
+
 
   @Override
   public void onRemoveTrack(RtpReceiver rtpReceiver) {

@@ -105,7 +105,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   private final BinaryMessenger messenger;
   private final Context context;
   private final TextureRegistry textures;
-  private PeerConnectionFactory mFactory;
+  private PcFactoryManager pcFactoryManager;
+  private PeerConnectionFactory defaultFactory;
   private final Map<String, MediaStream> localStreams = new HashMap<>();
   private final Map<String, LocalTrack> localTracks = new HashMap<>();
   private final LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
@@ -127,10 +128,6 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   private FlutterRTCFrameCryptor frameCryptor;
 
   private Activity activity;
-
-  private CustomVideoEncoderFactory videoEncoderFactory;
-
-  private CustomVideoDecoderFactory videoDecoderFactory;
 
   public AudioProcessingController audioProcessingController;
 
@@ -161,10 +158,16 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       peerConnectionDispose(connection);
     }
     mPeerConnectionObservers.clear();
+
+    if (pcFactoryManager != null) {
+      pcFactoryManager.disposeAll();
+      pcFactoryManager = null;
+      defaultFactory = null;
+    }
   }
   private void initialize(boolean bypassVoiceProcessing, int networkIgnoreMask, boolean forceSWCodec, List<String> forceSWCodecList,
   @Nullable ConstraintsMap androidAudioConfiguration) {
-    if (mFactory != null) {
+    if (pcFactoryManager  != null) {
       return;
     }
 
@@ -264,34 +267,20 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
     getUserMediaImpl.audioDeviceModule = (JavaAudioDeviceModule) audioDeviceModule;
 
-    final Options options = new Options();
-    options.networkIgnoreMask = networkIgnoreMask;
-
-    final PeerConnectionFactory.Builder factoryBuilder = PeerConnectionFactory.builder()
-            .setOptions(options);
-
-    // Initialize EGL contexts required for HW acceleration.
-    EglBase.Context eglContext = EglUtils.getRootEglBaseContext();
-
-    videoEncoderFactory = new CustomVideoEncoderFactory(eglContext, true, true);
-    videoDecoderFactory = new CustomVideoDecoderFactory(eglContext);
-
-    factoryBuilder
-            .setVideoEncoderFactory(videoEncoderFactory)
-            .setVideoDecoderFactory(videoDecoderFactory);
-
-    videoDecoderFactory.setForceSWCodec(forceSWCodec);
-    videoDecoderFactory.setForceSWCodecList(forceSWCodecList);
-    videoEncoderFactory.setForceSWCodec(forceSWCodec);
-    videoEncoderFactory.setForceSWCodecList(forceSWCodecList);
-
     audioProcessingController = new AudioProcessingController();
 
-    factoryBuilder.setAudioProcessingFactory(audioProcessingController.externalAudioProcessingFactory);
+    EglBase.Context eglContext = EglUtils.getRootEglBaseContext();
 
-    mFactory = factoryBuilder
-            .setAudioDeviceModule(audioDeviceModule)
-            .createPeerConnectionFactory();
+    pcFactoryManager = new PcFactoryManager(
+            audioDeviceModule,
+            audioProcessingController,
+            eglContext,
+            networkIgnoreMask,
+            forceSWCodec,
+            forceSWCodecList
+    );
+
+    defaultFactory = pcFactoryManager.getDefaultFactory();
 
   }
 
@@ -963,7 +952,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         if (kind.equals("video")) {
           mediaType = MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO;
         }
-        RtpCapabilities capabilities = mFactory.getRtpSenderCapabilities(mediaType);
+        RtpCapabilities capabilities = defaultFactory.getRtpSenderCapabilities(mediaType);
         result.success(capabilitiestoMap(capabilities).toMap());
         break;
       }
@@ -973,7 +962,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         if (kind.equals("video")) {
           mediaType = MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO;
         }
-        RtpCapabilities capabilities = mFactory.getRtpReceiverCapabilities(mediaType);
+        RtpCapabilities capabilities = defaultFactory.getRtpReceiverCapabilities(mediaType);
         result.success(capabilitiestoMap(capabilities).toMap());
         break;
       }
@@ -1369,8 +1358,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     String peerConnectionId = getNextStreamUUID();
     RTCConfiguration conf = parseRTCConfiguration(configuration);
     PeerConnectionObserver observer = new PeerConnectionObserver(conf, this, messenger, peerConnectionId);
-    PeerConnection peerConnection
-            = mFactory.createPeerConnection(
+    PeerConnectionFactory factory = pcFactoryManager.getOrCreateFactory(peerConnectionId);
+    PeerConnection peerConnection = factory.createPeerConnection(
             conf,
             parseMediaConstraints(constraints),
             observer);
@@ -1434,7 +1423,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   @Override
   public PeerConnectionFactory getPeerConnectionFactory() {
-    return mFactory;
+    return defaultFactory;
   }
 
   @Override
@@ -1512,7 +1501,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   public void getUserMedia(ConstraintsMap constraints, Result result) {
     String streamId = getNextStreamUUID();
-    MediaStream mediaStream = mFactory.createLocalMediaStream(streamId);
+    MediaStream mediaStream = defaultFactory.createLocalMediaStream(streamId);
 
     if (mediaStream == null) {
       // XXX The following does not follow the getUserMedia() algorithm
@@ -1528,7 +1517,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   public void getDisplayMedia(ConstraintsMap constraints, Result result) {
     String streamId = getNextStreamUUID();
-    MediaStream mediaStream = mFactory.createLocalMediaStream(streamId);
+    MediaStream mediaStream = defaultFactory.createLocalMediaStream(streamId);
 
     if (mediaStream == null) {
       // XXX The following does not follow the getUserMedia() algorithm
@@ -1597,7 +1586,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
 
   private void createLocalMediaStream(Result result) {
     String streamId = getNextStreamUUID();
-    MediaStream mediaStream = mFactory.createLocalMediaStream(streamId);
+    MediaStream mediaStream = defaultFactory.createLocalMediaStream(streamId);
     localStreams.put(streamId, mediaStream);
 
     if (mediaStream == null) {
@@ -1976,6 +1965,9 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       if (peerConnectionDispose(pco)) {
 
         mPeerConnectionObservers.remove(id);
+        if (pcFactoryManager != null) {
+          pcFactoryManager.disposeFactory(id);
+        }
       }
     } else {
       Log.d(TAG, "peerConnectionDispose() peerConnectionObserver is null");

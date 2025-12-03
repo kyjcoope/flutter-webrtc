@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\kyl3c\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\.cxx\\Debug\\566z6122\\x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\kyl3c\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\.cxx\\Debug\\566z6122\\x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "native_lib::@6890427a1f51a3e7e1df": {
+      "artifactName": "native_lib",
+      "abi": "x86_64",
+      "output": "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\example\\build\\flutter_webrtc\\intermediates\\cxx\\Debug\\566z6122\\obj\\x86_64\\libnative_lib.so",
+      "runtimeFiles": []
+    }
+  }
+}

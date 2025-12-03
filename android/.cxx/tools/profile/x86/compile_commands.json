@@ -1,0 +1,27 @@
+[
+{
+  "directory": "C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/.cxx/Debug/566z6122/x86",
+  "command": "C:\\Users\\kyl3c\\AppData\\Local\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=i686-none-linux-android21 --sysroot=C:/Users/kyl3c/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DDART_API_DL_IMPLEMENTATION -Dnative_lib_EXPORTS -IC:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/src/main/cpp -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -mstackrealign -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++14 -o CMakeFiles\\native_lib.dir\\src\\main\\cpp\\NativeBuffer.cpp.o -c C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\NativeBuffer.cpp",
+  "file": "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\NativeBuffer.cpp"
+},
+{
+  "directory": "C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/.cxx/Debug/566z6122/x86",
+  "command": "C:\\Users\\kyl3c\\AppData\\Local\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=i686-none-linux-android21 --sysroot=C:/Users/kyl3c/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DDART_API_DL_IMPLEMENTATION -Dnative_lib_EXPORTS -IC:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/src/main/cpp -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -mstackrealign -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++14 -o CMakeFiles\\native_lib.dir\\src\\main\\cpp\\native_buffer_api.cpp.o -c C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\native_buffer_api.cpp",
+  "file": "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\native_buffer_api.cpp"
+},
+{
+  "directory": "C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/.cxx/Debug/566z6122/x86",
+  "command": "C:\\Users\\kyl3c\\AppData\\Local\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=i686-none-linux-android21 --sysroot=C:/Users/kyl3c/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DDART_API_DL_IMPLEMENTATION -Dnative_lib_EXPORTS -IC:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/src/main/cpp -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -mstackrealign -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++14 -o CMakeFiles\\native_lib.dir\\src\\main\\cpp\\VideoDecoderBypassJNI.cpp.o -c C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\VideoDecoderBypassJNI.cpp",
+  "file": "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\VideoDecoderBypassJNI.cpp"
+},
+{
+  "directory": "C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/.cxx/Debug/566z6122/x86",
+  "command": "C:\\Users\\kyl3c\\AppData\\Local\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=i686-none-linux-android21 --sysroot=C:/Users/kyl3c/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DDART_API_DL_IMPLEMENTATION -Dnative_lib_EXPORTS -IC:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/src/main/cpp -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -mstackrealign -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -std=gnu++14 -o CMakeFiles\\native_lib.dir\\src\\main\\cpp\\AudioBufferUtilJNI.cpp.o -c C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\AudioBufferUtilJNI.cpp",
+  "file": "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\AudioBufferUtilJNI.cpp"
+},
+{
+  "directory": "C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/.cxx/Debug/566z6122/x86",
+  "command": "C:\\Users\\kyl3c\\AppData\\Local\\Android\\Sdk\\ndk\\28.2.13676358\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang.exe --target=i686-none-linux-android21 --sysroot=C:/Users/kyl3c/AppData/Local/Android/Sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DDART_API_DL_IMPLEMENTATION -Dnative_lib_EXPORTS -IC:/Users/kyl3c/Documents/GitHub/flutter-webrtc/android/src/main/cpp -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -mstackrealign -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -o CMakeFiles\\native_lib.dir\\src\\main\\cpp\\dart_api_dl.c.o -c C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\dart_api_dl.c",
+  "file": "C:\\Users\\kyl3c\\Documents\\GitHub\\flutter-webrtc\\android\\src\\main\\cpp\\dart_api_dl.c"
+}
+]

@@ -1,0 +1,14 @@
+# ninja log v5
+12	55	7864037775023079	CMakeFiles/native_lib.dir/src/main/cpp/dart_api_dl.c.o	35700dd9f194c9a
+3	57	7864037775033075	CMakeFiles/native_lib.dir/src/main/cpp/VideoDecoderBypassJNI.cpp.o	91803efe508f44f
+6	58	7864037775033075	CMakeFiles/native_lib.dir/src/main/cpp/AudioBufferUtilJNI.cpp.o	227524833f5e3056
+0	418	7864037778662427	CMakeFiles/native_lib.dir/src/main/cpp/NativeBuffer.cpp.o	c6fcd62833e5fa77
+9	516	7864037779613024	CMakeFiles/native_lib.dir/src/main/cpp/native_buffer_api.cpp.o	e97b29a1d5c1b672
+516	587	7864037780303742	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d
+3	62	7864058694323010	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d
+3	62	7864060118597608	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d
+4	62	7864065552653261	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d
+4	90	7864071364679609	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d
+4	71	7864081271663945	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d
+4	76	7864100835346516	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d
+4	60	7864166987130373	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86_64/libnative_lib.so	2b70f96e728871d

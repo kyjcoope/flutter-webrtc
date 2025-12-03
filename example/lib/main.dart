@@ -1,150 +1,188 @@
-import 'dart:core';
-
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_background/flutter_background.dart';
-import 'package:flutter_webrtc_example/src/capture_frame_sample.dart';
-
-import 'src/adm_sample.dart';
-import 'src/data_packet_cryptor_sample.dart';
-import 'src/device_enumeration_sample.dart';
-import 'src/get_display_media_sample.dart';
-import 'src/get_user_media_sample.dart'
-    if (dart.library.js_interop) 'src/get_user_media_sample_web.dart';
-import 'src/loopback_data_channel_sample.dart';
-import 'src/loopback_sample_unified_tracks.dart';
-import 'src/route_item.dart';
+import 'package:flutter_webrtc/bindings/media_frame.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  runApp(const BypassTestApp());
 }
 
-Future<bool> startForegroundService() async {
-  final androidConfig = FlutterBackgroundAndroidConfig(
-    notificationTitle: 'Title of the notification',
-    notificationText: 'Text of the notification',
-    notificationImportance: AndroidNotificationImportance.normal,
-    notificationIcon: AndroidResource(
-        name: 'background_icon',
-        defType: 'drawable'), // Default is ic_launcher from folder mipmap
-  );
-  await FlutterBackground.initialize(androidConfig: androidConfig);
-  return FlutterBackground.enableBackgroundExecution();
-}
-
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  late List<RouteItem> items;
+class BypassTestApp extends StatelessWidget {
+  const BypassTestApp({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _initItems();
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      home: BypassTestPage(),
+    );
+  }
+}
+
+class BypassTestPage extends StatefulWidget {
+  const BypassTestPage({super.key});
+
+  @override
+  State<BypassTestPage> createState() => _BypassTestPageState();
+}
+
+class _BypassTestPageState extends State<BypassTestPage> {
+  RTCPeerConnection? _pcSender;
+  RTCPeerConnection? _pcReceiver;
+  MediaStream? _localStream;
+
+  //final WebRTCMediaStreamer _streamer = WebRTCMediaStreamer();
+
+  StreamSubscription<EncodedVideoFrame>? _frameSub;
+  String? _remoteTrackId;
+  int _frameCount = 0;
+  bool _isRunning = false;
+
+  @override
+  void dispose() {
+    _stopTest();
+    super.dispose();
   }
 
-  ListBody _buildRow(context, item) {
-    return ListBody(children: <Widget>[
-      ListTile(
-        title: Text(item.title),
-        onTap: () => item.push(context),
-        trailing: Icon(Icons.arrow_right),
-      ),
-      Divider()
-    ]);
+  Future<void> _startTest() async {
+    if (_isRunning) return;
+    setState(() => _isRunning = true);
+
+    final mediaConstraints = <String, dynamic>{
+      'audio': false,
+      'video': {
+        'facingMode': 'user',
+      },
+    };
+
+    final stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    _localStream = stream;
+
+    final config = <String, dynamic>{
+      'iceServers': [
+        {'urls': 'stun:stun.l.google.com:19302'},
+      ],
+      'sdpSemantics': 'plan-b', // <--- ADD THIS LINE
+    };
+
+    final pcConstraints = <String, dynamic>{
+      'mandatory': {},
+      'optional': [],
+    };
+
+    final pc1 = await createPeerConnection(config, pcConstraints);
+    final pc2 = await createPeerConnection(config, pcConstraints);
+
+    _pcSender = pc1;
+    _pcReceiver = pc2;
+
+    pc1.onIceCandidate = (RTCIceCandidate candidate) {
+      if (candidate.candidate != null) {
+        pc2.addCandidate(candidate);
+      }
+    };
+
+    pc2.onIceCandidate = (RTCIceCandidate candidate) {
+      if (candidate.candidate != null) {
+        pc1.addCandidate(candidate);
+      }
+    };
+
+    await pc1.addStream(stream);
+
+    pc2.onTrack = (RTCTrackEvent event) async {
+      final track = event.track;
+      if (track.kind == 'video') {
+        _remoteTrackId = track.id;
+        debugPrint('Remote video track added: ${track.id}');
+        //final framesStream = await _streamer.videoFramesFrom(track.id ?? '');
+
+        // await _frameSub?.cancel();
+        // _frameSub = framesStream.listen((EncodedVideoFrame frame) {
+        //   _frameCount++;
+        //   debugPrint(
+        //     'Bypass frame $_frameCount: '
+        //     '${frame.width}x${frame.height}, '
+        //     'time=${frame.frameTime}, '
+        //     'len=${frame.buffer.lengthInBytes}, '
+        //     'codecType=${frame.codecType}, '
+        //     'frameType=${frame.frameType}',
+        //   );
+        //   setState(() {});
+        // });
+      }
+    };
+
+    final offer = await pc1.createOffer({
+      'offerToReceiveAudio': false,
+      'offerToReceiveVideo': true,
+    });
+    await pc1.setLocalDescription(offer);
+    await pc2.setRemoteDescription(offer);
+
+    final answer = await pc2.createAnswer({
+      'offerToReceiveAudio': false,
+      'offerToReceiveVideo': true,
+    });
+    await pc2.setLocalDescription(answer);
+    await pc1.setRemoteDescription(answer);
+  }
+
+  Future<void> _stopTest() async {
+    await _frameSub?.cancel();
+    _frameSub = null;
+
+    if (_remoteTrackId != null) {
+      //_streamer.disposeVideoStream(_remoteTrackId!);
+      _remoteTrackId = null;
+    }
+
+    await _pcSender?.close();
+    await _pcReceiver?.close();
+    _pcSender = null;
+    _pcReceiver = null;
+
+    await _localStream?.dispose();
+    _localStream = null;
+
+    setState(() {
+      _isRunning = false;
+      _frameCount = 0;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-          appBar: AppBar(
-            title: Text('Flutter-WebRTC example'),
-          ),
-          body: ListView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.all(0.0),
-              itemCount: items.length,
-              itemBuilder: (context, i) {
-                return _buildRow(context, items[i]);
-              })),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Bypass Test')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Status: ${_isRunning ? "Running" : "Stopped"}'),
+            const SizedBox(height: 8),
+            Text('Frames received via bypass: $_frameCount'),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _isRunning ? null : _startTest,
+              child: const Text('Start bypass test'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _isRunning ? _stopTest : null,
+              child: const Text('Stop'),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Notes:\n'
+              '- This app does not render video.\n'
+              '- Watch the logcat/Flutter logs for "Bypass frame ..." lines.\n'
+              '- Those log entries confirm that VideoDecoderBypass is being used.',
+            ),
+          ],
+        ),
+      ),
     );
-  }
-
-  void _initItems() {
-    items = <RouteItem>[
-      RouteItem(
-          title: 'GetUserMedia',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) => GetUserMediaSample()));
-          }),
-      RouteItem(
-          title: 'Device Enumeration',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) =>
-                        DeviceEnumerationSample()));
-          }),
-      RouteItem(
-          title: 'GetDisplayMedia',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) =>
-                        GetDisplayMediaSample()));
-          }),
-      RouteItem(
-          title: 'LoopBack Sample (Unified Tracks)',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) =>
-                        LoopBackSampleUnifiedTracks()));
-          }),
-      RouteItem(
-          title: 'DataChannelLoopBackSample',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) =>
-                        DataChannelLoopBackSample()));
-          }),
-      RouteItem(
-          title: 'Capture Frame',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) => CaptureFrameSample()));
-          }),
-      RouteItem(
-          title: 'ADM Sample',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) => AdmSample()));
-          }),
-      RouteItem(
-          title: 'Data Packet Cryptor Sample',
-          push: (BuildContext context) {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (BuildContext context) => DataPacketCryptorSample()));
-          }),
-    ];
   }
 }
