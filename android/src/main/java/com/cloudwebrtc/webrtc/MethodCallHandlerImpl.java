@@ -1879,9 +1879,16 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
                                                  final Result result) {
     PeerConnection peerConnection = getPeerConnection(id);
     if (peerConnection != null) {
+      // Get original SDP string and type
+      String originalSdp = sdpMap.getString("sdp");
+      String sdpType = sdpMap.getString("type");
+      
+      // Inject track IDs into the SDP for video streams
+      String modifiedSdp = injectTrackIdsIntoSdp(originalSdp);
+      
       SessionDescription sdp = new SessionDescription(
-              Type.fromCanonicalForm(sdpMap.getString("type")),
-              sdpMap.getString("sdp")
+              Type.fromCanonicalForm(sdpType),
+              modifiedSdp
       );
 
       peerConnection.setRemoteDescription(new SdpObserver() {
@@ -1907,6 +1914,78 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       resultError("peerConnectionSetRemoteDescription", "WEBRTC_SET_REMOTE_DESCRIPTION_ERROR: peerConnection is null", result);
     }
   }
+
+  /**
+   * Injects track IDs into SDP fmtp parameters for video streams.
+   * This allows the CustomVideoDecoderFactory to reliably identify which track
+   * each decoder belongs to, avoiding race conditions.
+   */
+  private String injectTrackIdsIntoSdp(String sdp) {
+    if (sdp == null || sdp.isEmpty()) {
+      return sdp;
+    }
+
+    try {
+      String[] lines = sdp.split("\r\n");
+      StringBuilder result = new StringBuilder();
+      String currentTrackId = null;
+      boolean inVideoSection = false;
+      
+      for (int i = 0; i < lines.length; i++) {
+        String line = lines[i];
+        
+        // Check if we're entering a video media section
+        if (line.startsWith("m=video")) {
+          inVideoSection = true;
+          currentTrackId = null; // Reset for this section
+        } else if (line.startsWith("m=")) {
+          // Entering a non-video section
+          inVideoSection = false;
+          currentTrackId = null;
+        }
+        
+        // Extract track ID from a=msid line if in video section
+        // Format: a=msid:<stream-id> <track-id>
+        if (inVideoSection && line.startsWith("a=msid:") && !line.contains("msid-semantic")) {
+          String[] parts = line.split(" ");
+          if (parts.length >= 2) {
+            currentTrackId = parts[1].trim();
+            Log.d(TAG, "Extracted trackId from SDP: " + currentTrackId);
+          }
+        }
+        
+        // Inject track ID into fmtp lines if we have one
+        if (inVideoSection && currentTrackId != null && line.startsWith("a=fmtp:")) {
+          // Parse the fmtp line: a=fmtp:<payload-type> <parameters>
+          int spaceIndex = line.indexOf(' ');
+          if (spaceIndex > 0) {
+            String prefix = line.substring(0, spaceIndex); // "a=fmtp:<payload-type>"
+            String params = line.substring(spaceIndex + 1); // existing parameters
+            
+            // Append our custom parameter
+            String modifiedLine = prefix + " " + params + ";x-track-id=" + currentTrackId;
+            result.append(modifiedLine).append("\r\n");
+            Log.d(TAG, "Modified fmtp line: " + modifiedLine);
+            continue; // Skip the original append
+          }
+        }
+        
+        result.append(line).append("\r\n");
+      }
+      
+      // Remove the trailing \r\n that we added
+      String finalSdp = result.toString();
+      if (finalSdp.endsWith("\r\n")) {
+        finalSdp = finalSdp.substring(0, finalSdp.length() - 2);
+      }
+      
+      return finalSdp;
+    } catch (Exception e) {
+      Log.e(TAG, "Error injecting track IDs into SDP, using original SDP", e);
+      return sdp; // Fallback to original SDP on error
+    }
+  }
+
 
   public void peerConnectionAddICECandidate(ConstraintsMap candidateMap, final String id,
                                             final Result result) {

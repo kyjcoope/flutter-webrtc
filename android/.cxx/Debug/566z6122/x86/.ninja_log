@@ -1,14 +1,7 @@
 # ninja log v5
-18	67	7864037762334277	CMakeFiles/native_lib.dir/src/main/cpp/dart_api_dl.c.o	5067fbe398721a25
-15	69	7864037762374323	CMakeFiles/native_lib.dir/src/main/cpp/AudioBufferUtilJNI.cpp.o	e6ea0f0aaa4a897c
-12	70	7864037762374323	CMakeFiles/native_lib.dir/src/main/cpp/VideoDecoderBypassJNI.cpp.o	92db4e4056f74051
-0	428	7864037765968701	CMakeFiles/native_lib.dir/src/main/cpp/NativeBuffer.cpp.o	31da88da2dbf23b5
-4	525	7864037766929585	CMakeFiles/native_lib.dir/src/main/cpp/native_buffer_api.cpp.o	d0501f25bb28dc84
-526	588	7864037767550050	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
-3	63	7864058693345472	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
-3	62	7864060117639268	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
-4	62	7864065551795874	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
-5	99	7864071363502883	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
-4	71	7864081270667086	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
-4	75	7864100834176520	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
-3	59	7864166986298783	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad
+11	69	7869943046070806	CMakeFiles/native_lib.dir/src/main/cpp/dart_api_dl.c.o	5067fbe398721a25
+6	71	7869943046070806	CMakeFiles/native_lib.dir/src/main/cpp/AudioBufferUtilJNI.cpp.o	e6ea0f0aaa4a897c
+3	71	7869943046085841	CMakeFiles/native_lib.dir/src/main/cpp/VideoDecoderBypassJNI.cpp.o	92db4e4056f74051
+0	436	7869943049839780	CMakeFiles/native_lib.dir/src/main/cpp/NativeBuffer.cpp.o	31da88da2dbf23b5
+9	538	7869943050858896	CMakeFiles/native_lib.dir/src/main/cpp/native_buffer_api.cpp.o	d0501f25bb28dc84
+538	618	7869943051659207	C:/Users/kyl3c/Documents/GitHub/flutter-webrtc/example/build/flutter_webrtc/intermediates/cxx/Debug/566z6122/obj/x86/libnative_lib.so	7af96a3669e43bad

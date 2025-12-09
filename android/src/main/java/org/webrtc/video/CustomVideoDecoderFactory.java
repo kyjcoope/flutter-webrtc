@@ -84,15 +84,26 @@ public class CustomVideoDecoderFactory implements VideoDecoderFactory {
       return softwareVideoDecoderFactory.createDecoder(videoCodecInfo);
     }
 
-    // 2) Try to get a queued trackId for bypass.
-    String trackId;
-    synchronized (trackQueue) {
-      trackId = trackQueue.poll();
+    // 2.5) Try to find "x-track-id" in the codec params (robust method).
+    // This is injected by our SDP modifier or passed via custom signaling.
+    String trackId = null;
+    if (videoCodecInfo != null && videoCodecInfo.params != null) {
+      if (videoCodecInfo.params.containsKey("x-track-id")) {
+         trackId = videoCodecInfo.params.get("x-track-id");
+         Log.d(TAG, "createDecoder: found x-track-id in params: " + trackId);
+      }
+    }
+
+    // 3) If not in params, fallback to the queue (legacy/race-prone method).
+    if (trackId == null) {
+      synchronized (trackQueue) {
+        trackId = trackQueue.poll();
+      }
     }
 
     // If we don’t have a trackId queued, fall back to normal decoder.
     if (trackId == null) {
-      Log.w(TAG, "createDecoder: no trackId queued, falling back to wrapped decoder. codec="
+      Log.w(TAG, "createDecoder: no trackId found in params or queue, falling back to wrapped decoder. codec="
               + (videoCodecInfo != null ? videoCodecInfo.name : "null"));
       return wrappedVideoDecoderFactory.createDecoder(videoCodecInfo);
     }
@@ -100,7 +111,7 @@ public class CustomVideoDecoderFactory implements VideoDecoderFactory {
     Log.d(TAG, "createDecoder: using VideoDecoderBypass for trackId=" + trackId
             + ", codec=" + (videoCodecInfo != null ? videoCodecInfo.name : "null"));
 
-    // 3) Use bypass decoder when we have a trackId.
+    // 4) Use bypass decoder when we have a trackId.
     return new VideoDecoderBypass(trackId, videoCodecInfo);
   }
 
