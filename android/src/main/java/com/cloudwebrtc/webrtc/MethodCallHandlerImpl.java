@@ -32,6 +32,7 @@ import com.cloudwebrtc.webrtc.audio.PlaybackSamplesReadyCallbackAdapter;
 import com.cloudwebrtc.webrtc.audio.RecordSamplesReadyCallbackAdapter;
 import com.cloudwebrtc.webrtc.record.AudioChannel;
 import com.cloudwebrtc.webrtc.record.FrameCapturer;
+import com.cloudwebrtc.webrtc.record.RawFrameCapturer;
 import com.cloudwebrtc.webrtc.utils.AnyThreadResult;
 import com.cloudwebrtc.webrtc.utils.Callback;
 import com.cloudwebrtc.webrtc.utils.ConstraintsArray;
@@ -115,6 +116,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   private final Map<String, MediaStream> localStreams = new HashMap<>();
   private final Map<String, LocalTrack> localTracks = new HashMap<>();
   private final LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
+  private final Map<String, RawFrameCapturer> rawFrameCapturers = new HashMap<>();
 
   public RecordSamplesReadyCallbackAdapter recordSamplesReadyCallbackAdapter;
 
@@ -878,6 +880,60 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           }
         } else {
           resultError("captureFrame", "Track is null", result);
+        }
+        break;
+      }
+      case "startFrameCapture": {
+        String videoTrackId = call.argument("trackId");
+        String peerConnectionId = call.argument("peerConnectionId");
+        Log.w(TAG, "startFrameCapture: track=" + videoTrackId + ", pc=" + peerConnectionId);
+
+        if (videoTrackId == null) {
+          resultError("startFrameCapture", "Missing 'trackId'", result);
+          break;
+        }
+
+        MediaStreamTrack track = getTrackForId(videoTrackId, peerConnectionId);
+        if (track == null) {
+             LocalTrack localTrack = localTracks.get(videoTrackId);
+             if (localTrack != null) track = localTrack.track;
+        }
+
+        if (!(track instanceof VideoTrack)) {
+          resultError("startFrameCapture", "Track not found or not a video track: " + videoTrackId, result);
+          break;
+        }
+
+        String key = peerConnectionId + ":" + videoTrackId;
+        RawFrameCapturer existing = rawFrameCapturers.remove(key);
+        if (existing != null) {
+          existing.stop();
+        }
+
+        RawFrameCapturer capturer = new RawFrameCapturer((VideoTrack) track);
+        rawFrameCapturers.put(key, capturer);
+        result.success(null);
+        break;
+      }
+
+      case "stopFrameCapture": {
+        String videoTrackId = call.argument("trackId");
+        String peerConnectionId = call.argument("peerConnectionId");
+        Log.w(TAG, "stopFrameCapture: track=" + videoTrackId);
+
+        if (videoTrackId == null) {
+            resultError("stopFrameCapture", "Missing 'trackId'", result);
+            break;
+        }
+
+        String key = peerConnectionId + ":" + videoTrackId;
+        RawFrameCapturer capturer = rawFrameCapturers.remove(key);
+        if (capturer != null) {
+          capturer.stop();
+          result.success(null);
+        } else {
+             Log.w(TAG, "stopFrameCapture: No active capturer for key " + key);
+             result.success(null);
         }
         break;
       }

@@ -122,6 +122,20 @@ class MediaStreamTrackNative extends MediaStreamTrack {
     return stop();
   }
 
+  Future<void> startFrameCapture() async {
+    await WebRTC.invokeMethod('startFrameCapture', <String, dynamic>{
+      'trackId': _trackId,
+      'peerConnectionId': _peerConnectionId,
+    });
+  }
+
+  Future<void> stopFrameCapture() async {
+    await WebRTC.invokeMethod('stopFrameCapture', <String, dynamic>{
+      'trackId': _trackId,
+      'peerConnectionId': _peerConnectionId,
+    });
+  }
+
   @override
   Future<void> stop() async {
     await WebRTC.invokeMethod(
