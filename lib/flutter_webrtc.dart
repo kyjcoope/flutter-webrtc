@@ -24,3 +24,4 @@ export 'src/native/ios/audio_configuration.dart';
 export 'src/native/rtc_video_platform_view_controller.dart';
 export 'src/native/rtc_video_platform_view.dart';
 export 'bindings/native_bindings.dart';
+export 'bindings/media_frame.dart';
