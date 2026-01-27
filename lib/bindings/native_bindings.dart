@@ -45,12 +45,6 @@ base class VideoMetadata extends ffi.Struct {
 
   @ffi.Int32()
   external int rotation;
-
-  @ffi.Int32()
-  external int frameType;
-
-  @ffi.Int32()
-  external int codecType;
 }
 
 base class AudioMetadata extends ffi.Struct {
@@ -111,8 +105,8 @@ class WebRTCMediaStreamer {
   }
   static final WebRTCMediaStreamer _instance = WebRTCMediaStreamer._internal();
 
-  final Map<String, StreamController<EncodedVideoFrame>>
-      _videoStreamControllers = {};
+  final Map<String, StreamController<RawVideoFrame>> _videoStreamControllers =
+      {};
   final StreamController<DecodedAudioSample> _audioStreamController =
       StreamController<DecodedAudioSample>.broadcast();
   final Map<String, ReceivePort> _receivePorts = {};
@@ -121,7 +115,7 @@ class WebRTCMediaStreamer {
   static bool _dartApiInitialized = false;
   bool _audioStreamInitialized = false;
 
-  Future<Stream<EncodedVideoFrame>> videoFramesFrom(String trackId) async {
+  Future<Stream<RawVideoFrame>> videoFramesFrom(String trackId) async {
     await _dartApiInitializationCompleter.future;
     if (_videoStreamControllers.containsKey(trackId)) {
       return _videoStreamControllers[trackId]!.stream;
@@ -140,10 +134,9 @@ class WebRTCMediaStreamer {
     return _audioStreamController.stream;
   }
 
-  StreamController<EncodedVideoFrame> _createVideoStreamController(
-      String trackId) {
-    late StreamController<EncodedVideoFrame> controller;
-    controller = StreamController<EncodedVideoFrame>.broadcast(
+  StreamController<RawVideoFrame> _createVideoStreamController(String trackId) {
+    late StreamController<RawVideoFrame> controller;
+    controller = StreamController<RawVideoFrame>.broadcast(
       onListen: () {},
       onCancel: () {
         if (!controller.hasListener) {
@@ -242,7 +235,7 @@ class WebRTCMediaStreamer {
     await _dartApiInitializationCompleter.future;
   }
 
-  EncodedVideoFrame? _fetchVideoFrame(String trackId) {
+  RawVideoFrame? _fetchVideoFrame(String trackId) {
     final keyPtr = trackId.toNativeUtf8();
     ffi.Pointer<MediaFrameNative> framePtr = ffi.nullptr;
     try {
@@ -257,7 +250,7 @@ class WebRTCMediaStreamer {
       if (mediaType != MediaType.video) {
         return null;
       }
-      return EncodedVideoFrame.fromPointer(framePtr);
+      return RawVideoFrame.fromPointer(framePtr);
     } catch (e) {
       return null;
     } finally {

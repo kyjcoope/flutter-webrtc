@@ -22,17 +22,14 @@ Java_com_cloudwebrtc_webrtc_record_RawFrameCapturer_initNativeBuffer(
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_cloudwebrtc_webrtc_record_RawFrameCapturer_pushFrame(
-    JNIEnv* env,
-    jclass clazz,
-    jstring jTrackId,
-    jobject buffer,
-    jint width,
-    jint height,
-    jlong frameTime,
-    jint rotation,
-    jint frameType,
-    jint codecOrPixelType) {
+Java_com_cloudwebrtc_webrtc_record_RawFrameCapturer_pushFrame(JNIEnv* env,
+                                                              jclass clazz,
+                                                              jstring jTrackId,
+                                                              jobject buffer,
+                                                              jint width,
+                                                              jint height,
+                                                              jlong frameTime,
+                                                              jint rotation) {
   const char* key = env->GetStringUTFChars(jTrackId, NULL);
   if (!key) {
     return 0LL;
@@ -51,9 +48,9 @@ Java_com_cloudwebrtc_webrtc_record_RawFrameCapturer_pushFrame(
   size_t dataSize = static_cast<size_t>(capacity);
 
   // We pass codecOrPixelType as the codecType argument to the underlying FFI
-  int ffi_result = pushVideoNativeBufferFFI(
-      key, buf, dataSize, width, height, static_cast<uint64_t>(frameTime),
-      rotation, frameType, static_cast<int>(codecOrPixelType));
+  int ffi_result =
+      pushVideoNativeBufferFFI(key, buf, dataSize, width, height,
+                               static_cast<uint64_t>(frameTime), rotation);
   env->ReleaseStringUTFChars(jTrackId, key);
   return static_cast<jlong>(ffi_result);
 }

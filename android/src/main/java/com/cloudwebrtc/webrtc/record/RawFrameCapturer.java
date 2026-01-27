@@ -29,8 +29,6 @@ public class RawFrameCapturer implements VideoSink {
 
     // Native ring buffer config
     private static final int DEFAULT_CAPACITY = 16; // number of frames to buffer
-    private static final int FRAME_TYPE_RAW = 1;     // raw (uncompressed)
-    private static final int PIXEL_TYPE_I420 = 1;    // I420 (YUV420 planar)
 
     private static native int initNativeBuffer(String trackId, int capacity, int bufferSize);
     private static native long pushFrame(String trackId,
@@ -38,9 +36,7 @@ public class RawFrameCapturer implements VideoSink {
                                          int width,
                                          int height,
                                          long frameTimeMs,
-                                         int rotation,
-                                         int frameType,
-                                         int codecOrPixelType);
+                                         int rotation);
     private static native void freeNativeBuffer(String trackId);
 
     private final VideoTrack videoTrack;
@@ -129,9 +125,7 @@ public class RawFrameCapturer implements VideoSink {
                         width,
                         height,
                         tsMs,
-                        rotation,
-                        FRAME_TYPE_RAW,
-                        PIXEL_TYPE_I420
+                        rotation
                 );
             } catch (Exception e) {
                 Log.e(TAG, "Error packing/pushing frame: " + e.getMessage(), e);
