@@ -12,6 +12,7 @@
 @class FlutterRTCFrameCapturer;
 @class FlutterRTCMediaRecorder;
 @class AudioManager;
+@class RawFrameCapturer;
 
 void postEvent(FlutterEventSink _Nonnull sink, id _Nullable event);
 
@@ -38,7 +39,8 @@ typedef void (^CapturerStopHandler)(CompletionHandler _Nonnull handler);
 @property(nonatomic, strong) NSMutableDictionary<NSString*, id<LocalTrack>>* _Nullable localTracks;
 @property(nonatomic, strong)
     NSMutableDictionary<NSNumber*, FlutterRTCVideoRenderer*>* _Nullable renders;
-@property(nonatomic, strong) NSMutableDictionary<NSNumber*, FlutterRTCMediaRecorder*>* _Nonnull recorders;
+@property(nonatomic, strong)
+    NSMutableDictionary<NSNumber*, FlutterRTCMediaRecorder*>* _Nonnull recorders;
 @property(nonatomic, strong)
     NSMutableDictionary<NSString*, CapturerStopHandler>* _Nullable videoCapturerStopHandlers;
 
@@ -48,6 +50,8 @@ typedef void (^CapturerStopHandler)(CompletionHandler _Nonnull handler);
     NSMutableDictionary<NSString*, RTCFrameCryptorKeyProvider*>* _Nullable keyProviders;
 @property(nonatomic, strong)
     NSMutableDictionary<NSString*, RTCDataPacketCryptor*>* _Nullable dataCryptors;
+@property(nonatomic, strong)
+    NSMutableDictionary<NSString*, RawFrameCapturer*>* _Nullable rawFrameCapturers;
 
 #if TARGET_OS_IPHONE
 @property(nonatomic, retain)

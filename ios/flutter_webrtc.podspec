@@ -14,13 +14,15 @@ A new flutter plugin project.
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.public_header_files = 'Classes/**/*.h'
+  s.exclude_files = ['Classes/native_buffer_api.h', 'Classes/NativeBuffer.h']
   s.dependency 'Flutter'
   s.dependency 'WebRTC-SDK', '137.7151.04'
   s.ios.deployment_target = '13.0'
   s.static_framework = true
   s.pod_target_xcconfig = {
-    'CLANG_CXX_LANGUAGE_STANDARD' => 'c++14',
-    'USER_HEADER_SEARCH_PATHS' => 'Classes/**/*.h'
+    'CLANG_CXX_LANGUAGE_STANDARD' => 'c++17',
+    'USER_HEADER_SEARCH_PATHS' => 'Classes/**/*.h',
+    'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES' => 'YES'
   }
   s.libraries = 'c++'
 end
