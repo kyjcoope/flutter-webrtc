@@ -13,7 +13,7 @@ A new flutter plugin project.
   s.author           = { 'CloudWebRTC' => 'duanweiwei1982@gmail.com' }
   s.source           = { :path => '.' }
   s.source_files     = ['Classes/**/*']
-  s.exclude_files = ['Classes/native_buffer_api.h', 'Classes/NativeBuffer.h']
+  s.exclude_files = ['Classes/native_buffer_api.h', 'Classes/NativeBuffer.h', 'Classes/dart_api*.h', 'Classes/dart_native_api.h', 'Classes/dart_tools_api.h', 'Classes/dart_version.h', 'Classes/internal/**']
 
   s.dependency 'FlutterMacOS'
   s.dependency 'WebRTC-SDK', '137.7151.04'
