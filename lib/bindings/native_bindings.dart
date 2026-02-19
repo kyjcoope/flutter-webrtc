@@ -13,7 +13,7 @@ final ffi.DynamicLibrary _nativeLib = _loadLibrary();
 ffi.DynamicLibrary _loadLibrary() {
   if (Platform.isAndroid) {
     return ffi.DynamicLibrary.open("libnative_lib.so");
-  } else if (Platform.isIOS) {
+  } else if (Platform.isIOS || Platform.isMacOS) {
     return ffi.DynamicLibrary.process();
   } else {
     throw UnsupportedError('Unsupported platform: ${Platform.operatingSystem}');
