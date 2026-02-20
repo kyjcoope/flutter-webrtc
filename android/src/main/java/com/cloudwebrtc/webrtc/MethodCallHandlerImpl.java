@@ -33,6 +33,7 @@ import com.cloudwebrtc.webrtc.audio.RecordSamplesReadyCallbackAdapter;
 import com.cloudwebrtc.webrtc.record.AudioChannel;
 import com.cloudwebrtc.webrtc.record.FrameCapturer;
 import com.cloudwebrtc.webrtc.record.RawFrameCapturer;
+import com.cloudwebrtc.webrtc.record.RawAudioCapturer;
 import com.cloudwebrtc.webrtc.utils.AnyThreadResult;
 import com.cloudwebrtc.webrtc.utils.Callback;
 import com.cloudwebrtc.webrtc.utils.ConstraintsArray;
@@ -117,6 +118,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
   private final Map<String, LocalTrack> localTracks = new HashMap<>();
   private final LongSparseArray<FlutterRTCVideoRenderer> renders = new LongSparseArray<>();
   private final Map<String, RawFrameCapturer> rawFrameCapturers = new HashMap<>();
+  private final Map<String, RawAudioCapturer> rawAudioCapturers = new HashMap<>();
 
   public RecordSamplesReadyCallbackAdapter recordSamplesReadyCallbackAdapter;
 
@@ -933,6 +935,61 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           result.success(null);
         } else {
              Log.w(TAG, "stopFrameCapture: No active capturer for key " + key);
+             result.success(null);
+        }
+        break;
+      }
+
+      case "startAudioCapture": {
+        String audioTrackId = call.argument("trackId");
+        String peerConnectionId = call.argument("peerConnectionId");
+        Log.d(TAG, "startAudioCapture: track=" + audioTrackId);
+
+        if (audioTrackId == null) {
+          resultError("startAudioCapture", "Missing 'trackId'", result);
+          break;
+        }
+
+        MediaStreamTrack track = getTrackForId(audioTrackId, peerConnectionId);
+        if (track == null) {
+             LocalTrack localTrack = localTracks.get(audioTrackId);
+             if (localTrack != null) track = localTrack.track;
+        }
+
+        if (!(track instanceof AudioTrack)) {
+          resultError("startAudioCapture", "Track not found or not an audio track: " + audioTrackId, result);
+          break;
+        }
+
+        String audioKey = peerConnectionId + ":" + audioTrackId;
+        RawAudioCapturer existingAudio = rawAudioCapturers.remove(audioKey);
+        if (existingAudio != null) {
+          existingAudio.stop();
+        }
+
+        RawAudioCapturer audioCapturer = new RawAudioCapturer((AudioTrack) track);
+        rawAudioCapturers.put(audioKey, audioCapturer);
+        result.success(null);
+        break;
+      }
+
+      case "stopAudioCapture": {
+        String audioTrackId = call.argument("trackId");
+        String peerConnectionId = call.argument("peerConnectionId");
+        Log.d(TAG, "stopAudioCapture: track=" + audioTrackId);
+
+        if (audioTrackId == null) {
+            resultError("stopAudioCapture", "Missing 'trackId'", result);
+            break;
+        }
+
+        String audioKey = peerConnectionId + ":" + audioTrackId;
+        RawAudioCapturer audioCapturer = rawAudioCapturers.remove(audioKey);
+        if (audioCapturer != null) {
+          audioCapturer.stop();
+          result.success(null);
+        } else {
+             Log.w(TAG, "stopAudioCapture: No active capturer for key " + audioKey);
              result.success(null);
         }
         break;

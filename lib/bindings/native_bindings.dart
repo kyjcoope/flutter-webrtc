@@ -6,8 +6,6 @@ import 'package:ffi/ffi.dart';
 
 import 'media_frame.dart';
 
-const String audioKey = "webrtc_audio_output";
-
 final ffi.DynamicLibrary _nativeLib = _loadLibrary();
 
 ffi.DynamicLibrary _loadLibrary() {
@@ -107,13 +105,12 @@ class WebRTCMediaStreamer {
 
   final Map<String, StreamController<RawVideoFrame>> _videoStreamControllers =
       {};
-  final StreamController<DecodedAudioSample> _audioStreamController =
-      StreamController<DecodedAudioSample>.broadcast();
+  final Map<String, StreamController<DecodedAudioSample>>
+      _audioStreamControllers = {};
   final Map<String, ReceivePort> _receivePorts = {};
   static final Completer<bool> _dartApiInitializationCompleter =
       Completer<bool>();
   static bool _dartApiInitialized = false;
-  bool _audioStreamInitialized = false;
 
   Future<Stream<RawVideoFrame>> videoFramesFrom(String trackId) async {
     await _dartApiInitializationCompleter.future;
@@ -126,12 +123,15 @@ class WebRTCMediaStreamer {
     return controller.stream;
   }
 
-  Future<Stream<DecodedAudioSample>> audioFrames() async {
+  Future<Stream<DecodedAudioSample>> audioFramesFrom(String trackId) async {
     await _dartApiInitializationCompleter.future;
-    if (!_audioStreamInitialized) {
-      await _initializeAudioStream();
+    if (_audioStreamControllers.containsKey(trackId)) {
+      return _audioStreamControllers[trackId]!.stream;
     }
-    return _audioStreamController.stream;
+
+    final controller = _createAudioStreamController(trackId);
+    await _setupAudioNotifications(trackId, controller);
+    return controller.stream;
   }
 
   StreamController<RawVideoFrame> _createVideoStreamController(String trackId) {
@@ -181,37 +181,52 @@ class WebRTCMediaStreamer {
     }
   }
 
-  Future<void> _initializeAudioStream() async {
-    if (_audioStreamInitialized) return;
+  StreamController<DecodedAudioSample> _createAudioStreamController(
+      String trackId) {
+    late StreamController<DecodedAudioSample> controller;
+    controller = StreamController<DecodedAudioSample>.broadcast(
+      onListen: () {},
+      onCancel: () {
+        if (!controller.hasListener) {
+          _cleanupAudioTrackResources(trackId);
+        }
+      },
+    );
 
+    _audioStreamControllers[trackId] = controller;
+    return controller;
+  }
+
+  Future<void> _setupAudioNotifications(
+      String trackId, StreamController controller) async {
     final receivePort = ReceivePort();
-    final audioKeyPtr = audioKey.toNativeUtf8();
+    final trackIdPtr = trackId.toNativeUtf8();
 
     try {
       final registered =
-          _registerPort(audioKeyPtr, receivePort.sendPort.nativePort);
+          _registerPort(trackIdPtr, receivePort.sendPort.nativePort);
       if (!registered) {
         receivePort.close();
-        throw StateError("Failed to register native port for audio");
+        throw StateError(
+            "Failed to register native port for audio track: $trackId");
       }
 
-      _receivePorts[audioKey] = receivePort;
+      _receivePorts[trackId] = receivePort;
       receivePort.listen((message) {
-        if (_audioStreamController.hasListener) {
-          final frame = _fetchAudioSample();
-          if (frame != null && !_audioStreamController.isClosed) {
-            _audioStreamController.add(frame);
+        final currentController = _audioStreamControllers[trackId];
+        if (currentController != null && currentController.hasListener) {
+          final frame = _fetchAudioSample(trackId);
+          if (frame != null && !currentController.isClosed) {
+            currentController.add(frame);
           }
         }
       });
-
-      _audioStreamInitialized = true;
     } catch (e) {
       receivePort.close();
-      calloc.free(audioKeyPtr);
+      calloc.free(trackIdPtr);
       rethrow;
     } finally {
-      calloc.free(audioKeyPtr);
+      calloc.free(trackIdPtr);
     }
   }
 
@@ -258,8 +273,8 @@ class WebRTCMediaStreamer {
     }
   }
 
-  DecodedAudioSample? _fetchAudioSample() {
-    final keyPtr = audioKey.toNativeUtf8();
+  DecodedAudioSample? _fetchAudioSample(String trackId) {
+    final keyPtr = trackId.toNativeUtf8();
     ffi.Pointer<MediaFrameNative> framePtr = ffi.nullptr;
     try {
       framePtr = _nativeBufferPop(keyPtr);
@@ -289,12 +304,23 @@ class WebRTCMediaStreamer {
     _receivePorts.remove(trackId);
   }
 
+  void _cleanupAudioTrackResources(String trackId) {
+    _audioStreamControllers[trackId]?.close();
+    _audioStreamControllers.remove(trackId);
+
+    _receivePorts[trackId]?.close();
+    _receivePorts.remove(trackId);
+  }
+
   void dispose() {
     for (final trackId in _videoStreamControllers.keys.toList()) {
       _cleanupTrackResources(trackId);
     }
     _videoStreamControllers.clear();
-    disposeAudioStream();
+    for (final trackId in _audioStreamControllers.keys.toList()) {
+      _cleanupAudioTrackResources(trackId);
+    }
+    _audioStreamControllers.clear();
   }
 
   void disposeVideoStream(String trackId) {
@@ -302,11 +328,8 @@ class WebRTCMediaStreamer {
     _cleanupTrackResources(trackId);
   }
 
-  void disposeAudioStream() {
-    if (!_audioStreamInitialized) return;
-    _audioStreamController.close();
-    _audioStreamInitialized = false;
-    _receivePorts[audioKey]?.close();
-    _receivePorts.remove(audioKey);
+  void disposeAudioStream(String trackId) {
+    if (!_audioStreamControllers.containsKey(trackId)) return;
+    _cleanupAudioTrackResources(trackId);
   }
 }

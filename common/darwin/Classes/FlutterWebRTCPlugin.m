@@ -17,7 +17,9 @@
 
 #endif
 #import "AudioManager.h"
+#import "RawAudioCapturer.h"
 #import "RawFrameCapturer.h"
+
 
 #import <AVFoundation/AVFoundation.h>
 #import <WebRTC/RTCFieldTrials.h>
@@ -197,6 +199,7 @@ static FlutterWebRTCPlugin* sharedSingleton;
   self.videoCapturerStopHandlers = [NSMutableDictionary new];
   self.recorders = [NSMutableDictionary new];
   self.rawFrameCapturers = [NSMutableDictionary new];
+  self.rawAudioCapturers = [NSMutableDictionary new];
 #if TARGET_OS_IPHONE
   self.focusMode = @"locked";
   self.exposureMode = @"locked";
@@ -931,6 +934,43 @@ static FlutterWebRTCPlugin* sharedSingleton;
       [capturer stopCapture];
       [self.rawFrameCapturers removeObjectForKey:trackId];
       NSLog(@"stopFrameCapture: Stopped for track %@", trackId);
+    }
+    result(nil);
+  } else if ([@"startAudioCapture" isEqualToString:call.method]) {
+    NSDictionary* argsMap = call.arguments;
+    NSString* trackId = argsMap[@"trackId"];
+    NSString* peerConnectionId = argsMap[@"peerConnectionId"];
+
+    RTCMediaStreamTrack* track = [self trackForId:trackId peerConnectionId:peerConnectionId];
+    if (track != nil && [track isKindOfClass:[RTCAudioTrack class]]) {
+      RTCAudioTrack* audioTrack = (RTCAudioTrack*)track;
+
+      // Check if already capturing
+      if (self.rawAudioCapturers[trackId] != nil) {
+        NSLog(@"startAudioCapture: Already capturing for track %@", trackId);
+        result(nil);
+        return;
+      }
+
+      RawAudioCapturer* capturer = [[RawAudioCapturer alloc] initWithTrack:audioTrack];
+      [capturer startCapture];
+      self.rawAudioCapturers[trackId] = capturer;
+      NSLog(@"startAudioCapture: Started for track %@", trackId);
+      result(nil);
+    } else {
+      result([FlutterError errorWithCode:@"startAudioCapture"
+                                 message:@"Track not found or not an audio track"
+                                 details:nil]);
+    }
+  } else if ([@"stopAudioCapture" isEqualToString:call.method]) {
+    NSDictionary* argsMap = call.arguments;
+    NSString* trackId = argsMap[@"trackId"];
+
+    RawAudioCapturer* capturer = self.rawAudioCapturers[trackId];
+    if (capturer != nil) {
+      [capturer stopCapture];
+      [self.rawAudioCapturers removeObjectForKey:trackId];
+      NSLog(@"stopAudioCapture: Stopped for track %@", trackId);
     }
     result(nil);
   } else if ([@"mediaStreamTrackHasTorch" isEqualToString:call.method]) {
